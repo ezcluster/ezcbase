@@ -1,4 +1,5 @@
-[defaults] 
+# ------ From vagrant plugin
+[defaults]
 {% if m.data.rolePaths | length > 0 %}
 roles_path = {% for rp in m.data.rolePaths %}{% if not loop.first %}:{% endif %}{{rp}}{% endfor %}
 {% endif %}
