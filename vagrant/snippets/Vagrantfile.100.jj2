@@ -1,0 +1,64 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+
+
+Vagrant.configure(2) do |config|
+ 
+  config.vm.box = "{{{ m.cluster.vagrant.box }}}"
+
+  config.vm.provider "virtualbox" do |vb|
+    #vb.gui = true
+  end
+{%% for node in m.cluster.nodes %%}
+
+  config.vm.define "{{{ node.name}}}" do |node|
+    node.vm.network "private_network", ip: "{{{node.ip}}}"
+{%% if node.default_router is defined  and node.default_router != None %%}
+{%% if node.default_router|lower != "none" %%}
+ 	# default router (https://www.vagrantup.com/docs/networking/public_network.html)
+  	node.vm.provision "shell",
+    	run: "always",
+    	inline: "route add default gw {{{node.default_router}}}"
+{%% endif %%}
+  	# delete default gw on eth0
+  	node.vm.provision "shell",
+    	run: "always",
+    	inline: "eval `route -n | awk '{ if ($8 ==\"eth0\" && $2 != \"0.0.0.0\") print \"route del default gw \" $2; }'`"
+{%% endif %%}
+{%% if m.cluster.domain is defined  and m.cluster.domain != None %%}
+    node.vm.hostname = "{{{ node.hostname }}}.{{{ m.cluster.domain }}}"
+{%% else %%}
+    node.vm.hostname = "{{{ node.hostname }}}"
+{%% endif %%}
+    node.vm.provider "virtualbox" do |vb|
+{%% if m.cluster.id == node.name %%}
+		vb.name = "{{{ node.name }}}"
+{%% else %%}
+		vb.name = "{{{m.cluster.id}}}_{{{ node.name }}}"
+{%% endif %%}
+        vb.customize ["modifyvm", :id, "--memory", "{{{ (m.data.roleByName[node.role].memory * 1024)|round|int }}}"]
+    	vb.customize ["modifyvm", :id, "--cpus", "{{{ m.data.roleByName[node.role].vcpu }}}"]
+{%% if node.name in m.data.dataDisksByNode %%}
+{%% for disk in m. data.dataDisksByNode[node.name] %%}
+  		vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', {{{disk.port}}}, '--device', 0, '--type', 'hdd', '--medium', '{{{ disk.fileName }}}']
+{%% endfor %%}
+{%% endif %%}
+    end
+{%% if node.synced_folders is defined and node.synced_folders | length > 0 %%}
+{%% for f in node.synced_folders %%}
+    node.vm.synced_folder "{{{ f.host_path }}}", "{{{ f.vm_path }}}", owner: "{{{ f.owner }}}", group: "{{{ f.group }}}"
+{%% endfor %%}
+{%% endif %%}
+  end
+{%% endfor %%}
+
+# We don't trigger provisionning from vagrant, since it is executed for each vm individualy. Use extra.sh main.yml instead
+
+
+
+end

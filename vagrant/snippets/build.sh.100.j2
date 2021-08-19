@@ -1,0 +1,30 @@
+
+MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+cd ${MYDIR}
+
+chmod +x ./cmd/*
+chmod +x ./ssh/*
+
+if [ "$1" != "{{m.cluster.id}}" ]
+then
+    echo 
+    echo "To really build the cluster, As a security, please provide cluster_id ({{m.cluster.id}}) as parameter"
+    echo
+    exit 1
+fi
+
+shift
+
+./cmd/buildCluster.sh
+
+#ansible --version
+
+OPTS=""
+{% if m.data.vaultPasswordFile is defined %}
+OPTS="$OPTS --vault-password-file {{ m.data.vaultPasswordFile }}"
+{% endif %}
+
+ansible-playbook ./main.yml $OPTS "$@"
+
+
