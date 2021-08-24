@@ -21,7 +21,7 @@
 - name: Full sudo rights to users
   copy:
     content: |
-      sa  ALL=(ALL) NOPASSWD:ALL
+      {{item.login}}  ALL=(ALL) NOPASSWD:ALL
     dest: "/etc/sudoers.d/{{item.login}}"
     mode: 0400
     owner: root
