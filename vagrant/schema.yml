@@ -43,8 +43,9 @@ mapping:
     type: map
     required: true
     mapping:
-      "box": { type: str, required: true }    
-      "yum_repo": { type: str, required: true, enum: ["public", "local", "untouched" ] }  # public: Set public repo  local: Set local one (Must be defined in config).  untouched: Preserve Vms original config
+      "box": { type: str, required: true }
+      "os_family": { type: str, required: false, enum: [ "RedHat", "Debian" ] }   # Default: RedHat. Refer to os_family ansible variable
+      "yum_repo": { type: str, required: false, enum: ["public", "local", "untouched" ] }  # public: Set public repo  local: Set local one (Must be defined in config).  untouched: Preserve Vms original config
       "synced_folders":
         include: synced_folder_list
       "default_router": { type: str, required: false }

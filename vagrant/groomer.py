@@ -74,14 +74,18 @@ def groomNodes(model):
 
 
 def groom(_plugin, model):
-    repoInConfig = "repositories" in model["config"] and "vagrant" in model["config"]["repositories"] and "yum_repo_base_url" in model["config"]["repositories"]["vagrant"]
-    if model["cluster"]["vagrant"]["yum_repo"] == "local" and not repoInConfig:
-        ERROR("'repositories.vagrant.repo_yum_base_url' is not defined in config file while 'vagrant.yum_repo' is set to 'local' in '{}'".format(model["data"]["sourceFileDir"]))
-    if repoInConfig:
-        # All plugins are lookinhg up their repositories in model["data"]. So does the vagrant one.
-        setDefaultInMap(model["data"], "repositories", {})
-        setDefaultInMap(model["data"]["repositories"], "vagrant", {})
-        model["data"]["repositories"]["vagrant"]["yum_repo_base_url"] = model["config"]["repositories"]["vagrant"]["yum_repo_base_url"]
+    setDefaultInMap(model["cluster"]["vagrant"], "os_family", "RedHat")
+    if model["cluster"]["vagrant"]["os_family"] == "RedHat":
+        if "yum_repo" not in model["cluster"]["vagrant"]:
+            ERROR("'vagrant.yum_repo' is mandatory if 'vagrant.os_family' == 'RedHat' (Set 'os_family' if not 'RedHat')")
+        repoInConfig = "repositories" in model["config"] and "vagrant" in model["config"]["repositories"] and "yum_repo_base_url" in model["config"]["repositories"]["vagrant"]
+        if model["cluster"]["vagrant"]["yum_repo"] == "local" and not repoInConfig:
+            ERROR("'repositories.vagrant.repo_yum_base_url' is not defined in config file while 'vagrant.yum_repo' is set to 'local' in '{}'".format(model["data"]["sourceFileDir"]))
+        if repoInConfig:
+            # All plugins are lookinhg up their repositories in model["data"]. So does the vagrant one.
+            setDefaultInMap(model["data"], "repositories", {})
+            setDefaultInMap(model["data"]["repositories"], "vagrant", {})
+            model["data"]["repositories"]["vagrant"]["yum_repo_base_url"] = model["config"]["repositories"]["vagrant"]["yum_repo_base_url"]
 
     groomRoles(model)
     groomNodes(model)
