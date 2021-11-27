@@ -19,7 +19,7 @@
 type: map
 mapping:
   "local_users":
-    required: false
+    required: true
     type: seq
     sequence:
       - type: str
