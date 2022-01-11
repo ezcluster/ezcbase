@@ -198,6 +198,9 @@ resource "aws_ebs_volume" "{{{disk.terraName}}}" {
 	availability_zone   = aws_instance.{{{node.terraName}}}.availability_zone
   	size				= {{{disk.size}}}
   	type				= "{{{disk.type}}}"
+{%% if disk.encrypted %%}
+	encrypted           = true
+{%% endif %%}
   // Must be same as instance tags. Otherwise, idempotency will fail. (Conflict between aws_ebs_volume.tags and aws_instance.volume_tags
 	tags = {
 {%% for name, value in node.aws.tags.items() %%}

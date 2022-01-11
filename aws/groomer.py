@@ -99,6 +99,7 @@ LISTENERS = "listeners"
 TARGET_GROUP = "target_group"
 CREATE_INSTANCE_ROLE = "create_instance_role"
 INSTANCE_ROLE_NAME = "instance_role_name"
+ENCRYPT_DATA_VOLUMES = "encrypt_data_volumes"
 
 logger = logging.getLogger("ezcluster.plugins.aws")
 
@@ -295,6 +296,7 @@ def groom_network_load_balancers(model):
                     ERROR("Unknow target_group '{}' for listener on port {} on network load balancer '{}'".format(listener[TARGET_GROUP], listener[PORT], nlb[NAME]))
             addTags(nlb, {"Name": nlb[NAME], "Cluster": model[CLUSTER][ID], "Owner": model[CLUSTER][AWS][OWNER]})
 
+ENCRYPTED = "encrypted"
 
 def groom_roles(model):
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
@@ -312,6 +314,7 @@ def groom_roles(model):
             ERROR("No 'ami' defined for role '{}' and in global scope".format(roleName))
         setDefaultInMap(role[AWS], ROOT_TYPE, "gp2")
         role[DISK_TO_MOUNT_COUNT] = 0
+        setDefaultInMap(role[AWS], ENCRYPT_DATA_VOLUMES, False)
         if DATA_DISKS in role:
             for i in range(0, len(role[DATA_DISKS])):
                 role[DATA_DISKS][i][INDEX] = i
@@ -321,6 +324,7 @@ def groom_roles(model):
                 if MOUNT in role[DATA_DISKS][i]:
                     role[DISK_TO_MOUNT_COUNT] += 1
                 setDefaultInMap(role[DATA_DISKS][i], TYPE, "gp2")
+                role[DATA_DISKS][i][ENCRYPTED] = role[AWS][ENCRYPT_DATA_VOLUMES]
         setDefaultInMap(role[AWS], CREATE_INSTANCE_ROLE, False)
         if role[AWS][CREATE_INSTANCE_ROLE]:
             setDefaultInMap(role[AWS], INSTANCE_ROLE_NAME, "{}_{}_instance".format(model[CLUSTER][ID], roleName))

@@ -144,6 +144,7 @@ mapping:
             "security_group": { type: str, required: true }   
             "create_instance_role": { type: bool, required: false }   # Default: false
             "instance_role_name": { type: str, required: false }    # Default to "<clusterId>_<role>_instance"
+            "encrypt_data_volumes": { type: bool, required: false }   # Default: false
             "tags":
               type: map
               required: false
