@@ -45,7 +45,7 @@ Vagrant.configure(2) do |config|
     	vb.customize ["modifyvm", :id, "--cpus", "{{{ m.data.roleByName[node.role].vcpu }}}"]
 {%% if node.name in m.data.dataDisksByNode %%}
 {%% for disk in m. data.dataDisksByNode[node.name] %%}
-  		vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', {{{disk.port}}}, '--device', 0, '--type', 'hdd', '--medium', '{{{ disk.fileName }}}']
+  		vb.customize ['storageattach', :id, '--storagectl', '{{{m.data.box.storageController}}}', '--port', {{{disk.port}}}, '--device', 0, '--type', 'hdd', '--medium', '{{{ disk.fileName }}}']
 {%% endfor %%}
 {%% endif %%}
     end

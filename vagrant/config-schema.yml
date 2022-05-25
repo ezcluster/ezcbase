@@ -1,6 +1,6 @@
 # Copyright (C) 2018 BROADSoftware
 #
-# This file is part of EzCluster
+# This file is part oEzCluster
 #
 # EzCluster is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -25,7 +25,22 @@ mapping:
         type: map
         required: false
         mapping:
-          "yum_repo_base_url": { type: str, required: false }          
+          "yum_repo_base_url": { type: str, required: false }
+  "boxes":
+    type: seq
+    required: true
+    sequence:
+      - type: map
+        mapping:
+          "names":
+            type: seq
+            sequence:
+              - type: str
+          "os_family": { type: str, required: true, enum: [ "RedHat", "Debian" ] }   # Refer to os_family ansible variable
+          "storageController": { type: str, required: true }
+          "firstFreeDiskPort": { type: int, required: true }
+          "defaultFsType": { type: str, required: true }
+
     
     
     

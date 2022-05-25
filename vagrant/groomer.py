@@ -26,7 +26,7 @@ loggerConfig = logging.getLogger("ezcluster.config")
 SYNCED_FOLDERS = "synced_folders"
 
 
-deviceFromIndex = ['sdb', 'sdc', 'sdd', 'sde', 'sdf', 'sdg', 'sdh', 'sdi', 'sdj', 'sdk', 'sdl', 'sdm', 'sdn', 'sdo', 'sdp', 'sdq', 'sdr', 'sds', 'sdt', 'sdu', 'sdv']
+deviceFromIndex = ['sda', 'sdb', 'sdc', 'sdd', 'sde', 'sdf', 'sdg', 'sdh', 'sdi', 'sdj', 'sdk', 'sdl', 'sdm', 'sdn', 'sdo', 'sdp', 'sdq', 'sdr', 'sds', 'sdt', 'sdu', 'sdv']
 
 
 def groomRoles(model):
@@ -34,9 +34,12 @@ def groomRoles(model):
     for rl in model["cluster"]["roles"]:
         role = model["data"]["roleByName"][rl["name"]]
         if "data_disks" in role:
+            first_port = model["data"]["box"]["firstFreeDiskPort"]
             for i in range(0, len(role['data_disks'])):
-                role['data_disks'][i]['port'] = i + 1
-                role['data_disks'][i]['device'] = deviceFromIndex[i]
+                port = i + first_port
+                role['data_disks'][i]['port'] = port
+                role['data_disks'][i]['device'] = deviceFromIndex[port]
+                setDefaultInMap(role['data_disks'][i], "fstype", model["data"]["box"]["defaultFsType"])
             disksToMount = 0
             for d in role['data_disks']:
                 if "mount" in d:
@@ -74,10 +77,15 @@ def groomNodes(model):
 
 
 def groom(_plugin, model):
-    setDefaultInMap(model["cluster"]["vagrant"], "os_family", "RedHat")
-    if model["cluster"]["vagrant"]["os_family"] == "RedHat":
+    for box in model["config"]["boxes"]:
+        for name in box["names"]:
+            if name == model["cluster"]["vagrant"]["box"]:
+                model["data"]["box"] = box
+    if "box" not in model["data"]:
+        ERROR("Unable to find a box definition in config for box={}".format(model["cluster"]["vagrant"]["box"]))
+    if model["data"]["box"]["os_family"] == "RedHat":
         if "yum_repo" not in model["cluster"]["vagrant"]:
-            ERROR("'vagrant.yum_repo' is mandatory if 'vagrant.os_family' == 'RedHat' (Set 'os_family' if not 'RedHat')")
+            ERROR("'vagrant.yum_repo' is mandatory if 'box.os_family' == 'RedHat'")
         repoInConfig = "repositories" in model["config"] and "vagrant" in model["config"]["repositories"] and "yum_repo_base_url" in model["config"]["repositories"]["vagrant"]
         if model["cluster"]["vagrant"]["yum_repo"] == "local" and not repoInConfig:
             ERROR("'repositories.vagrant.repo_yum_base_url' is not defined in config file while 'vagrant.yum_repo' is set to 'local' in '{}'".format(model["data"]["sourceFileDir"]))

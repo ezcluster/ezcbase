@@ -7,7 +7,7 @@ disk_additional_disks:
 {%% for disk in m.data.dataDisksByNode[m.node.name] %%}
 {%% if disk.mount is defined %%}
 - disk: /dev/{{{disk.device}}}
-  fstype: xfs
+  fstype: {{{disk.fstype}}}
   mount_options: "defaults,noatime"
   fsopts: ""
   mount: {{{ disk.mount }}}
