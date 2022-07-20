@@ -50,7 +50,8 @@ def groomRoles(model):
 
 
 DEFAULT_ROUTER = "default_router"
-
+ROOT_DISK_SIZE = "root_disk_size"
+RESIZE_ROOT_DISK = "resizeRootDisk"
 
 def groomNodes(model):
     resolveIps(model)
@@ -74,6 +75,12 @@ def groomNodes(model):
                 node[DEFAULT_ROUTER] = role[DEFAULT_ROUTER]
             elif DEFAULT_ROUTER in model["cluster"]["vagrant"]:
                 node[DEFAULT_ROUTER] = model["cluster"]["vagrant"][DEFAULT_ROUTER]
+        model["data"][RESIZE_ROOT_DISK] = True
+        if ROOT_DISK_SIZE not in node:
+            if ROOT_DISK_SIZE in role:
+                node[ROOT_DISK_SIZE] = role[ROOT_DISK_SIZE]
+            else:
+                model["data"][RESIZE_ROOT_DISK] = False
 
 
 def groom(_plugin, model):
