@@ -84,6 +84,8 @@ def groomNodes(model):
 
 
 def groom(_plugin, model):
+    if "boxes" not in model["config"]:
+        ERROR("Missing 'boxes' definition in config file")
     for box in model["config"]["boxes"]:
         for name in box["names"]:
             if name == model["cluster"]["vagrant"]["box"]:

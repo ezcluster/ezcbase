@@ -28,7 +28,7 @@ mapping:
           "yum_repo_base_url": { type: str, required: false }
   "boxes":
     type: seq
-    required: true
+    required: false
     sequence:
       - type: map
         mapping:
