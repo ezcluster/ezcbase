@@ -29,6 +29,7 @@ schema;node_list:
         required: true
         mapping:
           "network": { type: str, required: false }
+          "az": { type: str, required: false }
 
 
 
@@ -42,6 +43,7 @@ mapping:
       "image_default": { type: str, required: false }
       "network_default": { type: str, required: false }
       "flavor_default": { type: str, required: false }
+      "az_default": { type: str, required: false }
       "security_group_default": { type: str, required: false }
       "security_groups":
         type: seq
@@ -57,26 +59,28 @@ mapping:
                 sequence:
                   - type: map
                     mapping:
-                      "protocol": { type: str, required: true, enum: [ "all", "tcp", "udp", "icmp", "ah", "dccp", "egp", "esp", "gre", "igmp", "ospf", "pgm", "rsvp", "sctp", "udplite", "vrrp" ] }
                       "description": { type: str, required: false }
+                      "protocol": { type: str, required: true, enum: [ "all", "tcp", "udp", "icmp", "ah", "dccp", "egp", "esp", "gre", "igmp", "ospf", "pgm", "rsvp", "sctp", "udplite", "vrrp" ] }
                       "from_port": { type: int, required: false }
                       "to_port": { type: int, required: false }
-                      "port": { type: int, required: false }
-                      "target_cidr": { type: str, required: false }
-                      "target_sg": { type: str, required: false }
+                      "port": { type: str, required: false }
+                      "icmp_type": { type: int, required: false }
+                      "remote_cidr": { type: str, required: false }
+                      "remote_sg": { type: str, required: false }
               "inbound_rules":
                 type: seq
                 required: false
                 sequence:
                   - type: map
                     mapping:
-                      "protocol": { type: str, required: true, enum: [ "all", "tcp", "udp", "icmp", "ah", "dccp", "egp", "esp", "gre", "igmp", "ospf", "pgm", "rsvp", "sctp", "udplite", "vrrp" ] }
                       "description": { type: str, required: false }
+                      "protocol": { type: str, required: true, enum: [ "all", "tcp", "udp", "icmp", "ah", "dccp", "egp", "esp", "gre", "igmp", "ospf", "pgm", "rsvp", "sctp", "udplite", "vrrp" ] }
                       "from_port": { type: int, required: false }
                       "to_port": { type: int, required: false }
-                      "port": { type: int, required: false }
-                      "source_cidr": { type: str, required: false }
-                      "source_sg": { type: str, required: false }
+                      "port": { type: str, required: false }
+                      "icmp_type": { type: int, required: false }
+                      "remote_cidr": { type: str, required: false }
+                      "remote_sg": { type: str, required: false }
       "flavors":
         type: seq
         required: false
