@@ -1,0 +1,123 @@
+
+{% set project_name = m.cluster.openstack.project %}
+{% set project_config = m.config.projects[project_name] %}
+
+# Define required providers
+terraform {
+  required_version = ">= 0.14.0"
+  required_providers {
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+      version = "~> 1.48.0"
+    }
+  }
+}
+
+provider "openstack" {
+  user_name   = "{{ project_config.user_name }}"
+  tenant_name = "{{ project_name }}"
+  password    = "{{ project_config.password }}"
+  auth_url    = "{{ project_config.auth_url }}"
+  region      = "{{ project_config.region }}"
+  insecure    = {{ 'true' if project_config.insecure else 'false'}}
+}
+
+
+data "openstack_identity_project_v3" "project" {
+  name = "{{ project_name }}"
+}
+
+// -------------------------------------------- Security groups definition(s)
+
+{% for sg in m.cluster.openstack.security_groups %}
+
+resource "openstack_networking_secgroup_v2" "{{ m.func.terra_name(sg.name) }}" {
+  name        = "{{ sg.name }}"
+  description = "{{ sg.description }}"
+  delete_default_rules = true
+}
+{% endfor %}
+
+// ------------------------------------------ Referenced external security groups
+
+{% for referenced_sg in m.data.external_sg %}
+data "openstack_networking_secgroup_v2" "{{ m.func.terra_name(referenced_sg) }}" {
+  name = "{{ referenced_sg }}"
+  tenant_id = data.openstack_identity_project_v3.project.id
+}
+
+{% endfor %}
+
+{% for sg in m.cluster.openstack.security_groups %}
+
+// -------------------- Rules for sg:{{sg.name}}
+
+// ------------- ingress
+{% for rule in sg.inbound_rules %}
+
+resource "openstack_networking_secgroup_rule_v2" "{{  m.func.terra_name(rule._tf_name) }}" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  security_group_id = openstack_networking_secgroup_v2.{{  m.func.terra_name(sg.name) }}.id
+{%if rule.description is defined %}
+  description= "{{ rule.description  }}"
+{% endif %}
+{% if rule.protocol != "all" %}
+  protocol = "{{ rule.protocol }}"
+{% endif %}
+{% if rule.from_port is defined %}
+  port_range_min = "{{ rule.from_port }}"
+{% endif %}
+{% if rule.to_port is defined %}
+  port_range_max = "{{ rule.to_port | default('null') }}"
+{% endif %}
+{% if rule.remote_cidr is defined %}
+  remote_ip_prefix = "{{ rule.remote_cidr }}"
+{% endif %}
+{% if rule.remote_sg is defined %}
+{% if rule._external_sg %}
+  remote_group_id = data.openstack_networking_secgroup_v2.{{m.func.terra_name(rule.remote_sg)}}.id
+{% else %}
+  remote_group_id = openstack_networking_secgroup_v2.{{m.func.terra_name(rule.remote_sg)}}.id
+{% endif %}
+{% endif %}
+}
+
+{% endfor %}
+
+// ------------- egress
+{% for rule in sg.outbound_rules %}
+
+resource "openstack_networking_secgroup_rule_v2" "{{  m.func.terra_name(rule._tf_name) }}" {
+  direction         = "egress"
+  ethertype         = "IPv4"
+  security_group_id = openstack_networking_secgroup_v2.{{  m.func.terra_name(sg.name) }}.id
+{%if rule.description is defined %}
+  description= "{{ rule.description  }}"
+{% endif %}
+{% if rule.protocol != "all" %}
+  protocol = "{{ rule.protocol }}"
+{% endif %}
+{% if rule.from_port is defined %}
+  port_range_min = "{{ rule.from_port }}"
+{% endif %}
+{% if rule.to_port is defined %}
+  port_range_max = "{{ rule.to_port | default('null') }}"
+{% endif %}
+{% if rule.remote_cidr is defined %}
+  remote_ip_prefix = "{{ rule.remote_cidr }}"
+{% endif %}
+{% if rule.remote_sg is defined %}
+{% if rule._external_sg %}
+  remote_group_id = data.openstack_networking_secgroup_v2.{{m.func.terra_name(rule.remote_sg)}}.id
+{% else %}
+  remote_group_id = openstack_networking_secgroup_v2.{{m.func.terra_name(rule.remote_sg)}}.id
+{% endif %}
+{% endif %}
+}
+
+{% endfor %}
+
+
+
+{% endfor %}
