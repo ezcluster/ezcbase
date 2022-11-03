@@ -36,4 +36,14 @@ mapping:
               "name": { type: str, required: true}
               "local_private_key_path": { type: str, required: true}
 
+  "images":
+    type: map
+    required: true
+    mapping:
+      regex;(.*):
+        type: map
+        mapping:
+          "login": { type: str, required: true }
+
+
 

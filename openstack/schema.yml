@@ -26,10 +26,10 @@ schema;node_list:
     mapping:
       "openstack":
         type: map
-        required: true
+        required: false
         mapping:
           "network": { type: str, required: false }
-          "az": { type: str, required: false }
+          "availability_zone": { type: str, required: false }
 
 
 
@@ -40,6 +40,15 @@ mapping:
     required: true
     mapping:
       "project": { type: str, required: true }
+      "defaults":
+        type: map
+        required: false
+        mapping:
+          "image": { type: str, required: false }
+          "flavor": { type: str, required: false }
+          "security_groups": { type: seq, required: false, sequence: [{ type: str }] }
+          "network": { type: str, required: false }
+          "availability_zone": { type: str, required: false }
       "image_default": { type: str, required: false }
       "network_default": { type: str, required: false }
       "flavor_default": { type: str, required: false }
@@ -107,7 +116,11 @@ mapping:
             mapping:
               "image": { type: str, required: false }
               "flavor": { type: str, required: false }
-              "security_group": { type: str, required: false }
+              "security_groups":
+                type: seq
+                required: false
+                sequence:
+                  - type: str
           "data_disks":
             type: seq
             required: false

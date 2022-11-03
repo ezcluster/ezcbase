@@ -27,16 +27,6 @@ data "openstack_identity_project_v3" "project" {
   name = "{{ project_name }}"
 }
 
-// -------------------------------------------- Security groups definition(s)
-
-{% for sg in m.cluster.openstack.security_groups %}
-
-resource "openstack_networking_secgroup_v2" "{{ m.func.terra_name(sg.name) }}" {
-  name        = "{{ sg.name }}"
-  description = "{{ sg.description }}"
-  delete_default_rules = true
-}
-{% endfor %}
 
 // ------------------------------------------ Referenced external security groups
 
@@ -46,6 +36,17 @@ data "openstack_networking_secgroup_v2" "{{ m.func.terra_name(referenced_sg) }}"
   tenant_id = data.openstack_identity_project_v3.project.id
 }
 
+{% endfor %}
+
+// =================================================== Security groups definition(s)
+
+{% for sg in m.cluster.openstack.security_groups %}
+
+resource "openstack_networking_secgroup_v2" "{{ m.func.terra_name(sg.name) }}" {
+  name        = "{{ sg.name }}"
+  description = "{{ sg.description }}"
+  delete_default_rules = true
+}
 {% endfor %}
 
 {% for sg in m.cluster.openstack.security_groups %}
@@ -118,6 +119,46 @@ resource "openstack_networking_secgroup_rule_v2" "{{  m.func.terra_name(rule._tf
 
 {% endfor %}
 
+{% endfor %}
 
+// =================================================== Flavors definition(s)
+
+{% for flavor in m.cluster.openstack.flavors %}
+resource "openstack_compute_flavor_v2" "{{ m.func.terra_name(flavor.name) }}" {
+  name  = "{{ flavor.name }}"
+  ram   = "{{ flavor.ram_mb }}"
+  vcpus = "{{ flavor.vcpus }}"
+  disk  = "{{ flavor.disk_gb }}"
+}
 
 {% endfor %}
+
+
+// =================================================== Instances definition(s)
+
+{% for node in m.cluster.nodes %}
+// ...................................................... {{ node.name }}
+
+
+resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
+  name            = "{{ node.name }}"
+  image_name      = "{{ m.data.roleByName[node.role].openstack.image }}"
+{% if m.data.roleByName[node.role].openstack._external_flavor %}
+  flavor_name     = "{{ m.data.roleByName[node.role].openstack.flavor }}"
+{% else %}
+  flavor_id = openstack_compute_flavor_v2.{{m.func.terra_name(m.data.roleByName[node.role].openstack.flavor )}}.id
+{% endif %}
+  key_pair        = "{{ m.config.projects[project_name].key_pair.name }}"
+  security_groups = [{% for sg in m.data.roleByName[node.role].openstack.security_groups %}{% if loop.index > 1 %},{%endif%}"{{ sg }}"{% endfor %}]
+{% if node.openstack.availability_zone is defined %}
+  availability_zone = "{{ node.openstack.availability_zone }}"
+{% endif %}
+
+  network {
+    name = "{{ node.openstack.network }}"
+  }
+}
+
+{% endfor %}
+
+
