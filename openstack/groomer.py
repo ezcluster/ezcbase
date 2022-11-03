@@ -18,7 +18,7 @@
 import logging
 import os
 import re
-from misc import ERROR, appendPath
+from misc import ERROR, appendPath, setDefaultInMap
 
 logger = logging.getLogger("ezcluster.plugins.openstack")
 
@@ -27,12 +27,29 @@ CLUSTER="cluster"
 DATA="data"
 
 PROJECTS="projects"
-KEY_PAIR="key_pair"
-LOCAL_PRIVATE_KEY_PATH="local_private_key_path"
 
 NAME="name"
 OPENSTACK="openstack"
 PROJECT="project"
+FUNC="func"
+
+def terra_name(n):
+    return n.replace('.', "_")
+
+
+# ----------------------------------------------------------------------------- Config
+KEY_PAIR="key_pair"
+LOCAL_PRIVATE_KEY_PATH="local_private_key_path"
+
+def groom_config(model):
+    # Ensure local_key_path is valid
+    for pname, prj in model[CONFIG][PROJECTS].items():
+        if not os.path.exists(prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
+            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(pname, prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
+
+
+# ---------------------------------------------------------------------------- Security groups
+
 SECURITY_GROUPS="security_groups"
 OUTBOUND_RULES="outbound_rules"
 INBOUND_RULES="inbound_rules"
@@ -48,23 +65,6 @@ _TF_NAME="_tf_name"
 INTERNAL_SG="internal_sg"
 EXTERNAL_SG="external_sg"
 _EXTERNAL_SG="_external_sg"
-
-
-FUNC="func"
-
-def terra_name(n):
-    return n.replace('.', "_")
-
-
-def groom_config(model):
-    # Ensure local_key_path is valid
-    for pname, prj in model[CONFIG][PROJECTS].items():
-        if not os.path.exists(prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
-            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(pname, prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
-
-
-# ---------------------------------------------------------------------------- Security groups
-
 
 PORT_FROM_STRING = {
     "ftp-data": 20,
@@ -87,7 +87,6 @@ def is_number(x):
         return True
     except ValueError:
         return False
-    return False
 
 cidrCheck = re.compile("^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$")
 
@@ -144,18 +143,97 @@ def groom_security_groups(model):
         if sg[NAME] in model[DATA][INTERNAL_SG]:
             ERROR("Duplicate security_group.name: '{}'".format(sg[NAME]))
         model[DATA][INTERNAL_SG].add(sg[NAME])
-    if not sg[NAME].startswith(model[CLUSTER][ID] + "."):
-        ERROR("security_group[{}]: All defined security group name must be prefixed with '{}'".format(sg[NAME], model[CLUSTER][ID] + "."))
+        if not sg[NAME].startswith(model[CLUSTER][ID] + "."):
+            ERROR("security_groups[{}]: All defined security group name must be prefixed with '{}'".format(sg[NAME], model[CLUSTER][ID] + "."))
     for sg in model[CLUSTER][OPENSTACK][SECURITY_GROUPS]:
         for idx, rule in enumerate(sg[INBOUND_RULES]):
-            rule_name = "security_group[{}].inbound_rules[{}]".format(sg[NAME], idx)
+            rule_name = "security_groups[{}].inbound_rules[{}]".format(sg[NAME], idx)
             rule[_TF_NAME] = "{}_ingress_{}".format(sg[NAME], idx)
             groom_security_group_rules(model, rule, rule_name)
         for idx, rule in enumerate(sg[OUTBOUND_RULES]):
-            rule_name = "security_group[{}].outbound_rules[{}]".format(sg[NAME], idx)
+            rule_name = "security_groups[{}].outbound_rules[{}]".format(sg[NAME], idx)
             rule[_TF_NAME] = "{}_egress_{}".format(sg[NAME], idx)
             groom_security_group_rules(model, rule, rule_name)
 
+
+# ---------------------------------------------------------------------------------------- Flavors
+
+FLAVORS="flavors"
+INTERNAL_FLAVORS="insternal_flavors"
+
+
+def groom_flavors(model):
+    for flavor in model[CLUSTER][OPENSTACK][FLAVORS]:
+        prefix = "{}.{}.".format(model[CLUSTER][OPENSTACK][PROJECT],model[CLUSTER][ID])
+        if not flavor[NAME].startswith(prefix):
+            ERROR("flavors[{}]: All defined flavor name must be prefixed with '{}'".format(flavor[NAME], prefix))
+        model[DATA][INTERNAL_FLAVORS].add(flavor[NAME])
+
+# ---------------------------------------------------------------------------------------- Roles
+
+ROLE_BY_NAME="roleByName"
+IMAGE="image"
+IMAGES="images"
+_IMAGE_LOGIN="_image_login"
+LOGIN="login"
+_SECURITY_GROUPS="_security_groups"
+DEFAULTS="defaults"
+FLAVOR="flavor"
+_EXTERNAL_FLAVOR="_external_flavor"
+
+def groom_roles(model):
+    for roleName, role in model[DATA][ROLE_BY_NAME].items():
+        setDefaultInMap(role, OPENSTACK, {})
+        # --------  Handle image
+        if IMAGE not in role[OPENSTACK]:
+            if IMAGE in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                role[OPENSTACK][IMAGE] = model[CLUSTER][OPENSTACK][DEFAULTS][IMAGE]
+            else:
+                ERROR("role[{}].openstack.image is missing and there is no default value".format(roleName))
+        if role[OPENSTACK][IMAGE] not in model[CONFIG][IMAGES]:
+            ERROR("role[{}].openstack.image={}: Not referenced in config".format(roleName, role[OPENSTACK][IMAGE]))
+        role[OPENSTACK][_IMAGE_LOGIN] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][LOGIN]
+        # -------- flavor
+        if FLAVOR not in role[OPENSTACK]:
+            if FLAVOR in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                role[OPENSTACK][FLAVOR] = model[CLUSTER][OPENSTACK][DEFAULTS][FLAVOR]
+            else:
+                ERROR("role[{}].openstack.flavor is missing and there is no default value".format(roleName))
+        role[OPENSTACK][_EXTERNAL_FLAVOR] = role[OPENSTACK][FLAVOR] not in model[DATA][INTERNAL_FLAVORS]
+        # -------- Security groups
+        role[OPENSTACK][_SECURITY_GROUPS] = []
+        if SECURITY_GROUPS not in role[OPENSTACK]:
+            if SECURITY_GROUPS in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                role[OPENSTACK][SECURITY_GROUPS] = model[CLUSTER][OPENSTACK][DEFAULTS][SECURITY_GROUPS]
+            else:
+                logger.warning("role[{}] has no associated security groups")
+        if SECURITY_GROUPS in role[OPENSTACK]:
+            for sg_name in role[OPENSTACK][SECURITY_GROUPS]:
+                if sg_name in model[DATA][INTERNAL_SG]:
+                    role[OPENSTACK][_SECURITY_GROUPS].append({ "name": sg_name, "external": False})
+                else:
+                    role[OPENSTACK][_SECURITY_GROUPS].append({ "name": sg_name, "external": True})
+                    model[DATA][EXTERNAL_SG].add(sg_name)
+
+# ---------------------------------------------------------------------------------------- Nodes
+
+NODES="nodes"
+NETWORK="network"
+AVAILABILITY_ZONE="availability_zone"
+
+def groom_nodes(model):
+    for node in model[CLUSTER][NODES]:
+        setDefaultInMap(node, OPENSTACK, {})
+        if NETWORK not in node[OPENSTACK]:
+            if NETWORK in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                node[OPENSTACK][NETWORK] =  model[CLUSTER][OPENSTACK][DEFAULTS][NETWORK]
+            else:
+                ERROR("node[{}].openstack.network is missing and there is no default value".format(node[NAME]))
+        if AVAILABILITY_ZONE not in node[OPENSTACK]:
+            if AVAILABILITY_ZONE in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                node[OPENSTACK][AVAILABILITY_ZONE] =  model[CLUSTER][OPENSTACK][DEFAULTS][AVAILABILITY_ZONE]
+            else:
+                pass # availability_zone is optional
 
 # ___________________________________________________________________________________________________
 
@@ -163,10 +241,16 @@ def groom(_plugin, model):
     model[FUNC] = { "terra_name": terra_name }
     model[DATA][INTERNAL_SG] = set()
     model[DATA][EXTERNAL_SG] = set()
-    logger.info("Openstack grommer")
+    model[DATA][INTERNAL_FLAVORS] = set()
     groom_config(model)
     if model[CLUSTER][OPENSTACK][PROJECT] not in model[CONFIG][PROJECTS]:
         ERROR("Unexisting project '{}' definition".format(model[CLUSTER][OPENSTACK][PROJECT]))
+    setDefaultInMap(model[CLUSTER][OPENSTACK], DEFAULTS, {})
+    setDefaultInMap(model[CLUSTER][OPENSTACK], SECURITY_GROUPS, [])
+    setDefaultInMap(model[CLUSTER][OPENSTACK], FLAVORS, [])
     groom_security_groups(model)
+    groom_flavors(model)
+    groom_roles(model)
+    groom_nodes(model)
     model["data"]["buildScript"] = appendPath(model["data"]["targetFolder"], "build.sh")
     return True  # Always enabled

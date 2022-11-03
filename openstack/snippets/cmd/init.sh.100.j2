@@ -1,0 +1,15 @@
+{% set project_name = m.cluster.openstack.project %}
+{% set project_config = m.config.projects[project_name] %}
+
+
+export OS_USERNAME="{{ project_config.user_name }}"
+export OS_PROJECT_NAME="{{ project_name }}"
+export OS_PASSWORD="{{ project_config.password }}"
+export OS_AUTH_URL="{{ project_config.auth_url }}"
+export OS_REGION_NAME="{{ project_config.region }}"
+
+export OS_INTERFACE=public
+export OS_IDENTITY_API_VERSION=3
+
+unset OS_TENANT_ID
+unset OS_TENANT_NAME

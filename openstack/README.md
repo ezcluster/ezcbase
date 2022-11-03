@@ -1,5 +1,5 @@
 
 
-Security groups defined in a cluser definition will be named: <project>.<cluster>.<name>
+Security groups defined in a cluser definition must be named: <cluster>.<name>
 
-Same for flavor.
+Flavor defined in a cluster definition must be named: <project>.<cluster>.<name>
