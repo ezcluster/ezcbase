@@ -74,6 +74,7 @@ mapping:
                       "to_port": { type: int, required: false }
                       "port": { type: str, required: false }
                       "icmp_type": { type: int, required: false }
+                      "icmp_code": { type: int, required: false }
                       "remote_cidr": { type: str, required: false }
                       "remote_sg": { type: str, required: false }
               "inbound_rules":
@@ -88,6 +89,7 @@ mapping:
                       "to_port": { type: int, required: false }
                       "port": { type: str, required: false }
                       "icmp_type": { type: int, required: false }
+                      "icmp_code": { type: int, required: false }
                       "remote_cidr": { type: str, required: false }
                       "remote_sg": { type: str, required: false }
       "flavors":
