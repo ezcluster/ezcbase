@@ -15,6 +15,15 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with EzCluster.  If not, see <http://www.gnu.org/licenses/lgpl-3.0.html>.
 
+
+# About key pair
+# The key pair is common for all clusters of the project.
+# But the openstack resource key pair belong to a user. So, it will need to be created for each user.
+# To avoid the need to create user's key par separatly, it is created with the cluster.
+# And, as each cluster has its own tfstate, its openstack name must include the cluster name,
+# to avoid clashes (Two key of same user and same name in different tfstate)
+# This is done by ezcluster, by prefixing the base_name defined here with the cluster ID
+
 type: map
 mapping:
   "projects":
@@ -33,7 +42,8 @@ mapping:
             type: map
             required: true
             mapping:
-              "name": { type: str, required: true}
+              "base_name": { type: str, required: true}
+              "public_key": { type: str, required: true}
               "local_private_key_path": { type: str, required: true}
 
   "images":
