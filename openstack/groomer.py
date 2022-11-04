@@ -43,10 +43,7 @@ LOCAL_PRIVATE_KEY_PATH="local_private_key_path"
 DNS_ZONE="dns_zone"
 
 def groom_config(model):
-    # Ensure local_key_path is valid
     for pname, prj in model[CONFIG][PROJECTS].items():
-        if not os.path.exists(prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
-            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(pname, prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
         if not prj[DNS_ZONE].endswith("."):
             prj[DNS_ZONE] = prj[DNS_ZONE] + "."
 
@@ -163,7 +160,7 @@ def groom_security_groups(model):
 # ---------------------------------------------------------------------------------------- Flavors
 
 FLAVORS="flavors"
-INTERNAL_FLAVORS="insternal_flavors"
+INTERNAL_FLAVORS="internal_flavors"
 
 
 def groom_flavors(model):
@@ -179,7 +176,7 @@ ROLE_BY_NAME="roleByName"
 IMAGE="image"
 IMAGES="images"
 _IMAGE_LOGIN="_image_login"
-LOGIN="login"
+SSH_USER="ssh_user"
 _SECURITY_GROUPS="_security_groups"
 DEFAULTS="defaults"
 FLAVOR="flavor"
@@ -207,7 +204,7 @@ def groom_roles(model):
                 ERROR("role[{}].openstack.image is missing and there is no default value".format(roleName))
         if role[OPENSTACK][IMAGE] not in model[CONFIG][IMAGES]:
             ERROR("role[{}].openstack.image={}: Not referenced in config".format(roleName, role[OPENSTACK][IMAGE]))
-        role[OPENSTACK][_IMAGE_LOGIN] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][LOGIN]
+        role[OPENSTACK][SSH_USER] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][SSH_USER]
         # -------- flavor
         if FLAVOR not in role[OPENSTACK]:
             if FLAVOR in model[CLUSTER][OPENSTACK][DEFAULTS]:
@@ -236,6 +233,17 @@ NODES="nodes"
 NETWORK="network"
 AVAILABILITY_ZONE="availability_zone"
 _OS_NAME="_os_name"
+HOSTNAME="hostname"
+_FQDN="_fqdn"
+ROLE="role"
+
+
+def remove_trailing_dot(s):
+    if s.endswith("."):
+        return s[:-1]
+    else:
+        return s
+
 
 def groom_nodes(model):
     for node in model[CLUSTER][NODES]:
@@ -251,6 +259,7 @@ def groom_nodes(model):
             else:
                 pass # availability_zone is optional
         node[_OS_NAME] = "{}.{}".format(model[CLUSTER][ID], node[NAME])
+        node[_FQDN] = remove_trailing_dot(node[HOSTNAME] + "." + model[DATA][ROLE_BY_NAME][node[ROLE]][DOMAIN])
 
 # ---------------------------------------------------------------------------------------- key pair
 
@@ -260,7 +269,30 @@ PUBLIC_KEY="public_key"
 def groom_key_pair(model):
     project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
     model[DATA][KEY_PAIR] = { "name": "{}_{}".format(model[CLUSTER][ID], project[KEY_PAIR][BASE_NAME]), "public_key": project[KEY_PAIR][PUBLIC_KEY] }
+    if LOCAL_PRIVATE_KEY_PATH in project[KEY_PAIR]:
+        if not os.path.exists(project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
+            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(project[NAME], project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
+        model[DATA][KEY_PAIR][LOCAL_PRIVATE_KEY_PATH] = project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]
 
+
+# ---------------------------------------------------------------------------------------- Search domains
+
+SEARCH_DOMAINS="search_domains"
+
+def compute_search_domain(model):
+    project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
+    slices = remove_trailing_dot(project[DNS_ZONE]).split(".")
+    search_domains = []
+    domain = ""
+    sep = ""
+    for idx in range (len(slices)-1, -1, -1):
+        domain = slices[idx] + sep + domain
+        search_domains.insert(0, domain)
+        sep = "."
+    if DOMAIN in model[CLUSTER]:
+        domain = model[CLUSTER][DOMAIN] + sep + domain
+        search_domains.insert(0, domain)
+    model[DATA][SEARCH_DOMAINS] = search_domains
 
 
 # ___________________________________________________________________________________________________
@@ -283,5 +315,6 @@ def groom(_plugin, model):
     groom_roles(model)
     groom_nodes(model)
     groom_key_pair(model)
+    compute_search_domain(model)
     model["data"]["buildScript"] = appendPath(model["data"]["targetFolder"], "build.sh")
     return True  # Always enabled

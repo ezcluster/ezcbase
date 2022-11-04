@@ -1,0 +1,17 @@
+
+{% for node in m.cluster.nodes %}
+{{ node.name }} ansible_host={{ node._fqdn }} ansible_user={{m.data.roleByName[node.role].openstack.ssh_user}} ansible_become=true{%if m.data.key_pair.local_private_key_path is defined%} ansible_ssh_private_key_file={{m.data.key_pair.local_private_key_path}}{%endif%}
+
+{% endfor %}
+
+
+{% if m.data.groupByName is defined and m.data.groupByName|length > 0 %}
+{% for name, hosts in m.data.groupByName.items() %}
+
+[{{ name }}]
+{% for h in hosts %}
+{{ h }}
+{% endfor %}
+{% endfor %}
+
+{% endif %}

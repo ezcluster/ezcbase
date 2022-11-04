@@ -1,0 +1,64 @@
+
+- hosts: all
+  gather_facts: no
+  tasks:
+  - name: Wait for target instances to become reachable/usable
+    tags: [ "always" ]
+    wait_for_connection:
+      timeout: 600
+
+
+# We need to grep facts, as json caching reference node by short name (Without taking cluster in account) thus leading missmatcches
+- hosts: all
+  tasks:
+  - gather_facts:
+
+
+- hosts: all
+  vars:
+    search_domains: {{{ m.data.search_domains }}}
+  roles:
+    - role: search_domains
+      tags: [ "search_domains" ]
+  tasks:
+
+    - name: Fail if linux distribution is not handled
+      tags: ["always"]
+      ansible.builtin.fail:
+        msg: "{{ansible_facts['distribution']}} is not handled"
+      when: not (ansible_facts['distribution'] == 'Ubuntu')
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname }}"
+      tags: ["hostname"]
+
+    - block:
+        - name: Update all packages to their latest version
+          tags: [ "update_pkg" ]
+          ansible.builtin.apt:
+            name: "*"
+            state: latest
+            update_cache: yes
+
+        - name: Add some useful package
+          tags: [ "addon_pkg" ]
+          package: pkg=vim,htop,mlocate,ifupdown,net-tools,dnsutils,xfsprogs,whois,screen
+
+        - name: Test if reboot is required
+          tags: ["always"]
+          ansible.builtin.stat:
+            path: /var/run/reboot-required
+          register: reboot_result
+
+        - name: "Reboot if needed"
+          tags: ["always"]
+          ansible.builtin.reboot:
+            reboot_timeout: 600
+          when: reboot_result.stat.exists
+
+      when: ansible_facts['distribution'] == 'Ubuntu'
+
+
+
+
