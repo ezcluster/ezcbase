@@ -157,7 +157,7 @@ resource "openstack_compute_keypair_v2" "key_pair" {
 
 
 resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
-  name            = "{{ node.name }}"
+  name            = "{{ node._os_name }}"
   image_name      = "{{ m.data.roleByName[node.role].openstack.image }}"
 {% if m.data.roleByName[node.role].openstack._external_flavor %}
   flavor_name     = "{{ m.data.roleByName[node.role].openstack.flavor }}"

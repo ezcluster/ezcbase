@@ -61,6 +61,7 @@ FROM_PORT="from_port"
 TO_PORT="to_port"
 PORT="port"
 ICMP_TYPE="icmp_type"
+ICMP_CODE="icmp_code"
 REMOTE_CIDR="remote_cidr"
 REMOTE_SG="remote_sg"
 ID="id"
@@ -118,12 +119,12 @@ def groom_security_group_rules(model, rule, rule_name):
             if FROM_PORT not in rule or TO_PORT not in rule:
                 ERROR("security_group[{}]: 'from_port' and 'to_port' must be both defined if 'port' is not and protocol is udp or tcp".format(rule_name))
     elif rule[PROTOCOL] == "icmp":
+        if FROM_PORT in rule or TO_PORT in rule:
+            ERROR("security_group[{}]: 'from_port'/'to_port' can't be defined for icmp".format(rule_name))
         if ICMP_TYPE in rule:
             rule[FROM_PORT] = rule[ICMP_TYPE]
-            rule[TO_PORT] = rule[ICMP_TYPE]
-        else:
-            rule[FROM_PORT] = None
-            rule[TO_PORT] = None
+        if ICMP_CODE in rule:
+            rule[TO_PORT] = rule[ICMP_CODE]
     else:
         pass # Nothing to do
     if REMOTE_CIDR in rule:
@@ -184,10 +185,12 @@ DEFAULTS="defaults"
 FLAVOR="flavor"
 _EXTERNAL_FLAVOR="_external_flavor"
 DOMAIN="domain"
+DATA_DISKS="data_disks"
 
 def groom_roles(model):
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
         setDefaultInMap(role, OPENSTACK, {})
+        setDefaultInMap(role, DATA_DISKS, [] )
         # ---------- Handle domain
         project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
         if role[DOMAIN].endswith("."):
@@ -232,6 +235,7 @@ def groom_roles(model):
 NODES="nodes"
 NETWORK="network"
 AVAILABILITY_ZONE="availability_zone"
+_OS_NAME="_os_name"
 
 def groom_nodes(model):
     for node in model[CLUSTER][NODES]:
@@ -246,6 +250,7 @@ def groom_nodes(model):
                 node[OPENSTACK][AVAILABILITY_ZONE] =  model[CLUSTER][OPENSTACK][DEFAULTS][AVAILABILITY_ZONE]
             else:
                 pass # availability_zone is optional
+        node[_OS_NAME] = "{}.{}".format(model[CLUSTER][ID], node[NAME])
 
 # ---------------------------------------------------------------------------------------- key pair
 
