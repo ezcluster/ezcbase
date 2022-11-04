@@ -1,0 +1,22 @@
+
+
+
+- name: Test if 'netplan' subsystem is used
+  ansible.builtin.stat:
+    path: /etc/netplan
+  register: netplan_result
+
+- name: Fail if 'netplan' subsystem is not used
+  ansible.builtin.fail:
+    msg: Seems this target host does not support 'netplan' network configuration system
+  when: not netplan_result.stat.exists
+
+- name: copy search domain snippet in /etc/netplan
+  ansible.builtin.template:
+    src: 60-search.yaml.j2
+    dest: /etc/netplan/60-search.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - apply_netplan

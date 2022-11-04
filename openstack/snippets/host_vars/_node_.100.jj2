@@ -1,0 +1,7 @@
+
+ezcluster_ip: "{{ ansible_default_ipv4.address }}"
+
+hostname: {{{m.node.hostname}}}
+
+swap_file_size_mb: {{{ m.data.roleByName[m.node.role].swap_size_gb * 1024 }}}
+

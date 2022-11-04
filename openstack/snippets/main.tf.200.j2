@@ -177,7 +177,7 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
 
 resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
   zone_id     = data.openstack_dns_zone_v2.dns_zone.id
-  name        = "{{node.hostname}}.{{m.data.roleByName[node.role].domain }}"
+  name        = "{{node._fqdn}}."
   ttl         = 300
   type        = "A"
   records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
