@@ -40,12 +40,15 @@ def terra_name(n):
 # ----------------------------------------------------------------------------- Config
 KEY_PAIR="key_pair"
 LOCAL_PRIVATE_KEY_PATH="local_private_key_path"
+DNS_ZONE="dns_zone"
 
 def groom_config(model):
     # Ensure local_key_path is valid
     for pname, prj in model[CONFIG][PROJECTS].items():
         if not os.path.exists(prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
             ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(pname, prj[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
+        if not prj[DNS_ZONE].endswith("."):
+            prj[DNS_ZONE] = prj[DNS_ZONE] + "."
 
 
 # ---------------------------------------------------------------------------- Security groups
@@ -180,10 +183,19 @@ _SECURITY_GROUPS="_security_groups"
 DEFAULTS="defaults"
 FLAVOR="flavor"
 _EXTERNAL_FLAVOR="_external_flavor"
+DOMAIN="domain"
 
 def groom_roles(model):
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
         setDefaultInMap(role, OPENSTACK, {})
+        # ---------- Handle domain
+        project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
+        if role[DOMAIN].endswith("."):
+            # Domain is absolute. Must check against our zone
+            if not role[DOMAIN].endswith(project[DNS_ZONE]):
+                ERROR("role[{}].domain must ends with our dns_zone ({})".format(roleName, project[DNS_ZONE]))
+        else:
+            role[DOMAIN] = "{}.{}".format(role[DOMAIN], project[DNS_ZONE])
         # --------  Handle image
         if IMAGE not in role[OPENSTACK]:
             if IMAGE in model[CLUSTER][OPENSTACK][DEFAULTS]:
@@ -235,7 +247,20 @@ def groom_nodes(model):
             else:
                 pass # availability_zone is optional
 
+# ---------------------------------------------------------------------------------------- key pair
+
+BASE_NAME="base_name"
+PUBLIC_KEY="public_key"
+
+def groom_key_pair(model):
+    project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
+    model[DATA][KEY_PAIR] = { "name": "{}_{}".format(model[CLUSTER][ID], project[KEY_PAIR][BASE_NAME]), "public_key": project[KEY_PAIR][PUBLIC_KEY] }
+
+
+
 # ___________________________________________________________________________________________________
+
+
 
 def groom(_plugin, model):
     model[FUNC] = { "terra_name": terra_name }
@@ -252,5 +277,6 @@ def groom(_plugin, model):
     groom_flavors(model)
     groom_roles(model)
     groom_nodes(model)
+    groom_key_pair(model)
     model["data"]["buildScript"] = appendPath(model["data"]["targetFolder"], "build.sh")
     return True  # Always enabled

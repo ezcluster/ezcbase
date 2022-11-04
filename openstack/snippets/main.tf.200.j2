@@ -27,8 +27,9 @@ data "openstack_identity_project_v3" "project" {
   name = "{{ project_name }}"
 }
 
+// ============================================================== Data sources
 
-// ------------------------------------------ Referenced external security groups
+// ------------------------------------------ Security groups
 
 {% for referenced_sg in m.data.external_sg %}
 data "openstack_networking_secgroup_v2" "{{ m.func.terra_name(referenced_sg) }}" {
@@ -37,6 +38,14 @@ data "openstack_networking_secgroup_v2" "{{ m.func.terra_name(referenced_sg) }}"
 }
 
 {% endfor %}
+
+// -------------------------------------------- Dns zone
+
+data "openstack_dns_zone_v2" "dns_zone" {
+  name = "{{ project_config.dns_zone }}"
+}
+
+
 
 // =================================================== Security groups definition(s)
 
@@ -133,6 +142,13 @@ resource "openstack_compute_flavor_v2" "{{ m.func.terra_name(flavor.name) }}" {
 
 {% endfor %}
 
+// =================================================== key_pair definition
+
+resource "openstack_compute_keypair_v2" "key_pair" {
+  name       = "{{ m.data.key_pair.name }}"
+  public_key = "{{ m.data.key_pair.public_key }}"
+}
+
 
 // =================================================== Instances definition(s)
 
@@ -148,7 +164,7 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
 {% else %}
   flavor_id = openstack_compute_flavor_v2.{{m.func.terra_name(m.data.roleByName[node.role].openstack.flavor )}}.id
 {% endif %}
-  key_pair        = "{{ m.config.projects[project_name].key_pair.name }}"
+  key_pair        = "{{ m.data.key_pair.name }}"
   security_groups = [{% for sg in m.data.roleByName[node.role].openstack.security_groups %}{% if loop.index > 1 %},{%endif%}"{{ sg }}"{% endfor %}]
 {% if node.openstack.availability_zone is defined %}
   availability_zone = "{{ node.openstack.availability_zone }}"
@@ -158,6 +174,15 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
     name = "{{ node.openstack.network }}"
   }
 }
+
+resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
+  zone_id     = data.openstack_dns_zone_v2.dns_zone.id
+  name        = "{{node.hostname}}.{{m.data.roleByName[node.role].domain }}"
+  ttl         = 300
+  type        = "A"
+  records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
+}
+
 
 {% endfor %}
 
