@@ -54,6 +54,11 @@ mapping:
         type: map
         mapping:
           "ssh_user": { type: str, required: true }
+          "device_from_idx":
+            type: seq
+            required: true
+            sequence:
+              - type: str
 
 
 

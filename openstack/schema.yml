@@ -49,6 +49,7 @@ mapping:
           "security_groups": { type: seq, required: false, sequence: [{ type: str }] }
           "network": { type: str, required: false }
           "availability_zone": { type: str, required: false }
+          "data_fstype": { type: str, required: false }
       "image_default": { type: str, required: false }
       "network_default": { type: str, required: false }
       "flavor_default": { type: str, required: false }
@@ -130,4 +131,6 @@ mapping:
             - type: map
               mapping:
                 "size": { type: int, required: true }
+                "device": { type: str, required: false }    # Normaly, computed by the system. Just in case we need to overwrite
                 "mount": { type: str, required: false }
+                "fstype": { type: str, required: false }

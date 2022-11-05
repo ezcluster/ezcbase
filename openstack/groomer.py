@@ -183,6 +183,14 @@ FLAVOR="flavor"
 _EXTERNAL_FLAVOR="_external_flavor"
 DOMAIN="domain"
 DATA_DISKS="data_disks"
+INDEX="index"
+DEVICE="device"
+DEVICE_FROM_IDX="device_from_idx"
+MOUNT="mount"
+DISK_TO_MOUNT_COUNT = "disksToMountCount"
+FSTYPE="fstype"
+DATA_FSTYPE="data_fstype"
+
 
 def groom_roles(model):
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
@@ -205,6 +213,7 @@ def groom_roles(model):
         if role[OPENSTACK][IMAGE] not in model[CONFIG][IMAGES]:
             ERROR("role[{}].openstack.image={}: Not referenced in config".format(roleName, role[OPENSTACK][IMAGE]))
         role[OPENSTACK][SSH_USER] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][SSH_USER]
+        disk_device_from_idx = model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][DEVICE_FROM_IDX]
         # -------- flavor
         if FLAVOR not in role[OPENSTACK]:
             if FLAVOR in model[CLUSTER][OPENSTACK][DEFAULTS]:
@@ -218,7 +227,7 @@ def groom_roles(model):
             if SECURITY_GROUPS in model[CLUSTER][OPENSTACK][DEFAULTS]:
                 role[OPENSTACK][SECURITY_GROUPS] = model[CLUSTER][OPENSTACK][DEFAULTS][SECURITY_GROUPS]
             else:
-                logger.warning("role[{}] has no associated security groups")
+                logger.warning("role[{}] has no associated security groups".format(roleName))
         if SECURITY_GROUPS in role[OPENSTACK]:
             for sg_name in role[OPENSTACK][SECURITY_GROUPS]:
                 if sg_name in model[DATA][INTERNAL_SG]:
@@ -226,6 +235,19 @@ def groom_roles(model):
                 else:
                     role[OPENSTACK][_SECURITY_GROUPS].append({ "name": sg_name, "external": True})
                     model[DATA][EXTERNAL_SG].add(sg_name)
+        # -------------------- Data disks
+        role[DISK_TO_MOUNT_COUNT] = 0
+        for i in range(0, len(role[DATA_DISKS])):
+            disk = role[DATA_DISKS][i]
+            disk[INDEX] = i
+            setDefaultInMap(disk, DEVICE, disk_device_from_idx[i])
+            if MOUNT in disk:
+                role[DISK_TO_MOUNT_COUNT] += 1
+                if not FSTYPE in disk:
+                    if not DATA_FSTYPE in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                        ERROR("role[{}].data_disks[{}].fstype is missing and there is no default value".format(roleName, i))
+                    else:
+                        disk[FSTYPE] =  model[CLUSTER][OPENSTACK][DEFAULTS][DATA_FSTYPE]
 
 # ---------------------------------------------------------------------------------------- Nodes
 
