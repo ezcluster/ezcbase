@@ -20,6 +20,8 @@
   roles:
     - role: search_domains
       tags: [ "search_domains" ]
+    - role: disk_format
+      tags: [ "data_disks" ]
   tasks:
 
     - name: Fail if linux distribution is not handled
@@ -43,7 +45,7 @@
 
         - name: Add some useful package
           tags: [ "addon_pkg" ]
-          package: pkg=vim,htop,mlocate,ifupdown,net-tools,dnsutils,xfsprogs,whois,screen
+          package: pkg=vim,htop,mlocate,ifupdown,net-tools,dnsutils,xfsprogs,whois,screen,ncdu
 
         - name: Test if reboot is required
           tags: ["always"]

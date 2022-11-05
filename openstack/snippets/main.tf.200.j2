@@ -155,7 +155,6 @@ resource "openstack_compute_keypair_v2" "key_pair" {
 {% for node in m.cluster.nodes %}
 // ...................................................... {{ node.name }}
 
-
 resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
   name            = "{{ node._os_name }}"
   image_name      = "{{ m.data.roleByName[node.role].openstack.image }}"
@@ -183,6 +182,22 @@ resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
   records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
 }
 
+{% for disk in m.data.roleByName[node.role].data_disks %}
+
+resource "openstack_blockstorage_volume_v3" "{{ m.func.terra_name(node.name) }}_{{ disk.index}}" {
+  name = "{{ m.func.terra_name(node.name) }}_{{ disk.index}}"
+  size = {{ disk.size }}
+{% if node.openstack.availability_zone is defined %}
+  availability_zone = "{{ node.openstack.availability_zone }}"
+{% endif %}
+}
+
+resource "openstack_compute_volume_attach_v2" "{{ m.func.terra_name(node.name) }}_{{ disk.index}}" {
+  instance_id = "${openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.id}"
+  volume_id   = "${openstack_blockstorage_volume_v3.{{ m.func.terra_name(node.name) }}_{{ disk.index}}.id}"
+}
+
+{% endfor %}
 
 {% endfor %}
 
