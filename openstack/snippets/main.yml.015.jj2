@@ -22,6 +22,8 @@
       tags: [ "search_domains" ]
     - role: disk_format
       tags: [ "data_disks" ]
+    - role: swap_file
+      tags: ["base", "swap"]
   tasks:
 
     - name: Fail if linux distribution is not handled
