@@ -2,7 +2,7 @@
 
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-. $MYDIR/init.sh
+. $MYDIR/../os_config.sh
 
 {% for node in m.cluster.nodes %}
 echo "Will stop {{ node._os_name }}" && openstack server stop {{ node._os_name }} &
