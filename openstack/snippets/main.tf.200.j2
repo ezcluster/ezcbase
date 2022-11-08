@@ -201,4 +201,20 @@ resource "openstack_compute_volume_attach_v2" "{{ m.func.terra_name(node.name) }
 
 {% endfor %}
 
+// ============================================================== DNS definitions
+
+{% for entry in m.cluster.openstack.dns_records %}
+
+resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(entry.name) }}" {
+  zone_id     = data.openstack_dns_zone_v2.dns_zone.id
+  name        = "{{entry.name}}"
+  ttl         = {{entry.ttl}}
+  type        = "{{entry.type}}"
+  records     = [ {% for r in entry.records %}{% if loop.index > 1 %} ,{%endif%}"{{r}}"{%endfor%} ]
+}
+
+
+
+{% endfor %}
+
 

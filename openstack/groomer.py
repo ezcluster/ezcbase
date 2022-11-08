@@ -296,6 +296,43 @@ def groom_key_pair(model):
             ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(project[NAME], project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
         model[DATA][KEY_PAIR][LOCAL_PRIVATE_KEY_PATH] = project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]
 
+# ---------------------------------------------------------------------------------------- dns records
+
+DNS_RECORDS="dns_records"
+TTL="ttl"
+RECORDS="records"
+SET_AS_VIP="set_as_vip"
+TYPE="type"
+
+def groom_dns_records(model):
+    setDefaultInMap(model[CLUSTER][OPENSTACK], DNS_RECORDS, [])
+    for record in model[CLUSTER][OPENSTACK][DNS_RECORDS]:
+        setDefaultInMap(record, TYPE, "A" )
+        setDefaultInMap(record, TTL, 3000)
+        setDefaultInMap(record, SET_AS_VIP, True)
+        project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
+        if record[NAME].endswith("."):
+            # Domain is absolute. Must check against our zone
+            if not record[NAME].endswith(project[DNS_ZONE]):
+                ERROR("openstack.dns_record[{}] must ends with our dns_zone ({})".format(record[NAME], project[DNS_ZONE]))
+        else:
+            if DOMAIN not in model[CLUSTER]:
+                ERROR("domain must be defined at the top level cluster file")
+            record[NAME] = "{}.{}.{}".format(record[NAME], model[CLUSTER][DOMAIN], project[DNS_ZONE])
+        if len(record[RECORDS]) < 1:
+            ERROR("openstack.dns_record[{}] have at least one record".format(record[NAME]))
+        # if record[NAME].endswith("."):
+        #     # Domain is absolute. Must check against our zone
+        #     if not record[NAME].endswith(project[DNS_ZONE]):
+        #         ERROR("openstack.dns_record[{}] must ends with our dns_zone ({})".format(record[NAME], project[DNS_ZONE]))
+        #     record[_FQDN] = record[NAME]
+        #     record[NAME] = record[NAME][:-(len(project[DNS_ZONE])+1)]
+        # else:
+        #     if DOMAIN not in model[CLUSTER]:
+        #         ERROR("domain must be defined at the top level cluster file")
+        #     record[NAME] = "{}.{}".format(record[NAME], model[CLUSTER][DOMAIN])
+        #     record[_FQDN] = remove_trailing_dot("{}.{}".format(record[NAME], project[DNS_ZONE]))
+
 
 # ---------------------------------------------------------------------------------------- Search domains
 
@@ -337,6 +374,11 @@ def groom(_plugin, model):
     groom_roles(model)
     groom_nodes(model)
     groom_key_pair(model)
+    groom_dns_records(model)
     compute_search_domain(model)
     model["data"]["buildScript"] = appendPath(model["data"]["targetFolder"], "build.sh")
     return True  # Always enabled
+
+
+def to_call(n):
+    print("======================= " + n)
