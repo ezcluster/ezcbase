@@ -304,8 +304,11 @@ RECORDS="records"
 SET_AS_VIP="set_as_vip"
 TYPE="type"
 
+LOCAL_DNS="local_dns"
+
 def groom_dns_records(model):
     setDefaultInMap(model[CLUSTER][OPENSTACK], DNS_RECORDS, [])
+    model[DATA][LOCAL_DNS] = {}
     for record in model[CLUSTER][OPENSTACK][DNS_RECORDS]:
         setDefaultInMap(record, TYPE, "A" )
         setDefaultInMap(record, TTL, 3000)
@@ -321,6 +324,18 @@ def groom_dns_records(model):
             record[NAME] = "{}.{}.{}".format(record[NAME], model[CLUSTER][DOMAIN], project[DNS_ZONE])
         if len(record[RECORDS]) < 1:
             ERROR("openstack.dns_record[{}] have at least one record".format(record[NAME]))
+
+        #slices = remove_trailing_dot(record[NAME]).split(".")
+        slices = record[NAME].split(".")
+        sep = ""
+        current = ""
+        for idx in range(0, len(slices)):
+            current = current + sep + slices[idx]
+            model[DATA][LOCAL_DNS][current] = record[RECORDS][0]
+            sep="."
+
+
+
         # if record[NAME].endswith("."):
         #     # Domain is absolute. Must check against our zone
         #     if not record[NAME].endswith(project[DNS_ZONE]):
