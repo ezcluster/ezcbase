@@ -61,6 +61,7 @@ mapping:
               "type": { type: str, required: false }  # Default: 'A'
               "ttl": { type: number, required: false }  # Default: 3000
               "records": { type: seq, required: true, sequence: [ { type: str } ]}
+              "set_as_vip": { type: bool, required: false } # Set as allowed address on all nodes with appropriate flag. Default true
       "security_groups":
         type: seq
         required: false
@@ -130,6 +131,7 @@ mapping:
                 required: false
                 sequence:
                   - type: str
+              "host_vip": { type: bool, required: false } # Will be concerned by adding allowed_addresses. Default true
           "data_disks":
             type: seq
             required: false
