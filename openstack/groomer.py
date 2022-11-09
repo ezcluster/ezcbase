@@ -194,8 +194,10 @@ DISK_TO_MOUNT_COUNT = "disksToMountCount"
 FSTYPE="fstype"
 DATA_FSTYPE="data_fstype"
 HOST_VIP="host_vip"
+IMAGES_TO_FETCH="imagesToFetch"
 
 def groom_roles(model):
+    model[DATA][IMAGES_TO_FETCH] = set()
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
         setDefaultInMap(role, OPENSTACK, {})
         setDefaultInMap(role[OPENSTACK], HOST_VIP, True)
@@ -214,6 +216,7 @@ def groom_roles(model):
                 role[OPENSTACK][IMAGE] = model[CLUSTER][OPENSTACK][DEFAULTS][IMAGE]
             else:
                 ERROR("role[{}].openstack.image is missing and there is no default value".format(roleName))
+        model[DATA][IMAGES_TO_FETCH].add(role[OPENSTACK][IMAGE])
         if role[OPENSTACK][IMAGE] not in model[CONFIG][IMAGES]:
             ERROR("role[{}].openstack.image={}: Not referenced in config".format(roleName, role[OPENSTACK][IMAGE]))
         role[OPENSTACK][SSH_USER] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][SSH_USER]
@@ -262,8 +265,7 @@ _OS_NAME="_os_name"
 HOSTNAME="hostname"
 _FQDN="_fqdn"
 ROLE="role"
-
-NETWORK_TO_FETCH="networkToFetch"
+NETWORKS_TO_FETCH="networksToFetch"
 
 def remove_trailing_dot(s):
     if s.endswith("."):
@@ -273,7 +275,7 @@ def remove_trailing_dot(s):
 
 
 def groom_nodes(model):
-    model[DATA][NETWORK_TO_FETCH] = set()
+    model[DATA][NETWORKS_TO_FETCH] = set()
     for node in model[CLUSTER][NODES]:
         setDefaultInMap(node, OPENSTACK, {})
         if NETWORK not in node[OPENSTACK]:
@@ -281,7 +283,7 @@ def groom_nodes(model):
                 node[OPENSTACK][NETWORK] =  model[CLUSTER][OPENSTACK][DEFAULTS][NETWORK]
             else:
                 ERROR("node[{}].openstack.network is missing and there is no default value".format(node[NAME]))
-        model[DATA][NETWORK_TO_FETCH].add(node[OPENSTACK][NETWORK])
+        model[DATA][NETWORKS_TO_FETCH].add(node[OPENSTACK][NETWORK])
         if AVAILABILITY_ZONE not in node[OPENSTACK]:
             if AVAILABILITY_ZONE in model[CLUSTER][OPENSTACK][DEFAULTS]:
                 node[OPENSTACK][AVAILABILITY_ZONE] =  model[CLUSTER][OPENSTACK][DEFAULTS][AVAILABILITY_ZONE]

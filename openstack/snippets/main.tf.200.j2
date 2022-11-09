@@ -51,7 +51,7 @@ data "openstack_dns_zone_v2" "dns_zone" {
 
 // -------------------------------------------- Networks
 
-{% for network in m.data.networkToFetch %}
+{% for network in m.data.networksToFetch %}
 data "openstack_networking_network_v2" "{{ m.func.terra_name(network) }}" {
     name = "{{ network }}"
     tenant_id = data.openstack_identity_project_v3.project.id
@@ -59,6 +59,14 @@ data "openstack_networking_network_v2" "{{ m.func.terra_name(network) }}" {
 
 {% endfor %}
 
+// -------------------------------------------- Images
+
+{% for img in m.data.imagesToFetch %}
+data "openstack_images_image_v2" "{{ m.func.terra_name(img) }}" {
+    name = "{{ img }}"
+}
+
+{% endfor %}
 
 // =================================================== Security groups definition(s)
 
@@ -169,6 +177,17 @@ resource "openstack_compute_keypair_v2" "key_pair" {
 
 // ...................................................... {{ node.name }}
 
+{% for disk in m.data.roleByName[node.role].data_disks %}
+
+resource "openstack_blockstorage_volume_v3" "{{ m.func.terra_name(node.name) }}_{{ disk.index + 1}}" {
+  name = "{{ node._os_name }}.{{ disk.index + 1 }}"
+  size = {{ disk.size }}
+{% if node.openstack.availability_zone is defined %}
+  availability_zone = "{{ node.openstack.availability_zone }}"
+{% endif %}
+}
+
+{% endfor %}
 
 resource "openstack_networking_port_v2" "{{ m.func.terra_name(node.name) }}-0" {
   network_id = data.openstack_networking_network_v2.{{ m.func.terra_name(node.openstack.network)}}.id
@@ -176,7 +195,7 @@ resource "openstack_networking_port_v2" "{{ m.func.terra_name(node.name) }}-0" {
   security_group_ids = [{% for sg in m.data.roleByName[node.role].openstack._security_groups %}{%- if loop.index > 1 -%}, {% endif %}
 {% if sg.external %}data.openstack_networking_secgroup_v2.{{  m.func.terra_name(sg.name) }}.id
 {%- else -%}openstack_networking_secgroup_v2.{{ m.func.terra_name(sg.name) }}.id{%- endif -%}{%- endfor -%} ]
-  name = "{{node._os_name}}-0"
+  name = "{{node._os_name}}.0"
 
 {% if m.data.roleByName[node.role].openstack.host_vip %}
 {% for record in m.cluster.openstack.dns_records %}
@@ -191,19 +210,15 @@ resource "openstack_networking_port_v2" "{{ m.func.terra_name(node.name) }}-0" {
 {% endif %}
 }
 
-
-
-
 resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
-  name            = "{{ node._os_name }}"
-  image_name      = "{{ m.data.roleByName[node.role].openstack.image }}"
+  name          = "{{ node._os_name }}"
+  image_id      = data.openstack_images_image_v2.{{ m.data.roleByName[node.role].openstack.image }}.id
 {% if m.data.roleByName[node.role].openstack._external_flavor %}
-  flavor_name     = "{{ m.data.roleByName[node.role].openstack.flavor }}"
+  flavor_name   = "{{ m.data.roleByName[node.role].openstack.flavor }}"
 {% else %}
   flavor_id = openstack_compute_flavor_v2.{{m.func.terra_name(m.data.roleByName[node.role].openstack.flavor )}}.id
 {% endif %}
-  key_pair        = "{{ m.data.key_pair.name }}"
-  security_groups = [{% for sg in m.data.roleByName[node.role].openstack.security_groups %}{% if loop.index > 1 %},{%endif%}"{{ sg }}"{% endfor %}]
+  key_pair      = "{{ m.data.key_pair.name }}"
 {% if node.openstack.availability_zone is defined %}
   availability_zone = "{{ node.openstack.availability_zone }}"
 {% endif %}
@@ -211,6 +226,27 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
   network {
     port = openstack_networking_port_v2.{{ m.func.terra_name(node.name) }}-0.id
   }
+
+  block_device {
+    uuid                  = data.openstack_images_image_v2.{{ m.data.roleByName[node.role].openstack.image }}.id
+    source_type           = "image"
+    boot_index            = 0
+    destination_type      = "local"
+    delete_on_termination = true
+  }
+
+
+{% for disk in m.data.roleByName[node.role].data_disks %}
+  block_device {
+    uuid                  = openstack_blockstorage_volume_v3.{{ m.func.terra_name(node.name) }}_{{ disk.index +1 }}.id
+    source_type           = "volume"
+    destination_type      = "volume"
+    boot_index            = {{disk.index +1 }}
+    delete_on_termination = true
+  }
+
+{% endfor %}
+
 }
 
 resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
@@ -221,22 +257,6 @@ resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
   records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
 }
 
-{% for disk in m.data.roleByName[node.role].data_disks %}
-
-resource "openstack_blockstorage_volume_v3" "{{ m.func.terra_name(node.name) }}_{{ disk.index}}" {
-  name = "{{ m.func.terra_name(node.name) }}_{{ disk.index}}"
-  size = {{ disk.size }}
-{% if node.openstack.availability_zone is defined %}
-  availability_zone = "{{ node.openstack.availability_zone }}"
-{% endif %}
-}
-
-resource "openstack_compute_volume_attach_v2" "{{ m.func.terra_name(node.name) }}_{{ disk.index}}" {
-  instance_id = "${openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.id}"
-  volume_id   = "${openstack_blockstorage_volume_v3.{{ m.func.terra_name(node.name) }}_{{ disk.index}}.id}"
-}
-
-{% endfor %}
 
 {% endfor %}
 
