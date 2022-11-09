@@ -23,11 +23,14 @@ provider "openstack" {
 }
 
 
+// ============================================================== Data sources
+
+
+// -------------------------------------------------- Project
+
 data "openstack_identity_project_v3" "project" {
   name = "{{ project_name }}"
 }
-
-// ============================================================== Data sources
 
 // ------------------------------------------ Security groups
 
@@ -43,8 +46,18 @@ data "openstack_networking_secgroup_v2" "{{ m.func.terra_name(referenced_sg) }}"
 
 data "openstack_dns_zone_v2" "dns_zone" {
   name = "{{ project_config.dns_zone }}"
+  project_id = data.openstack_identity_project_v3.project.id
 }
 
+// -------------------------------------------- Networks
+
+{% for network in m.data.networkToFetch %}
+data "openstack_networking_network_v2" "{{ m.func.terra_name(network) }}" {
+    name = "{{ network }}"
+    tenant_id = data.openstack_identity_project_v3.project.id
+}
+
+{% endfor %}
 
 
 // =================================================== Security groups definition(s)
@@ -153,7 +166,33 @@ resource "openstack_compute_keypair_v2" "key_pair" {
 // =================================================== Instances definition(s)
 
 {% for node in m.cluster.nodes %}
+
 // ...................................................... {{ node.name }}
+
+
+resource "openstack_networking_port_v2" "{{ m.func.terra_name(node.name) }}-0" {
+  network_id = data.openstack_networking_network_v2.{{ m.func.terra_name(node.openstack.network)}}.id
+  admin_state_up = "true"
+  security_group_ids = [{% for sg in m.data.roleByName[node.role].openstack._security_groups %}{%- if loop.index > 1 -%}, {% endif %}
+{% if sg.external %}data.openstack_networking_secgroup_v2.{{  m.func.terra_name(sg.name) }}.id
+{%- else -%}openstack_networking_secgroup_v2.{{ m.func.terra_name(sg.name) }}.id{%- endif -%}{%- endfor -%} ]
+  name = "{{node._os_name}}-0"
+
+{% if m.data.roleByName[node.role].openstack.host_vip %}
+{% for record in m.cluster.openstack.dns_records %}
+{% if record.set_as_vip %}
+{% for ip in record.records %}
+  allowed_address_pairs {
+    ip_address = "{{ip}}"
+  }
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+}
+
+
+
 
 resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
   name            = "{{ node._os_name }}"
@@ -170,7 +209,7 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
 {% endif %}
 
   network {
-    name = "{{ node.openstack.network }}"
+    port = openstack_networking_port_v2.{{ m.func.terra_name(node.name) }}-0.id
   }
 }
 

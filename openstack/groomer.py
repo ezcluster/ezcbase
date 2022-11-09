@@ -79,7 +79,8 @@ PORT_FROM_STRING = {
     "sftp": 115,
     "ntp": 123,
     "imap3": 220,
-    "https": 443
+    "https": 443,
+    "dns": 53
 }
 
 def is_number(x):
@@ -147,6 +148,8 @@ def groom_security_groups(model):
         if not sg[NAME].startswith(model[CLUSTER][ID] + "."):
             ERROR("security_groups[{}]: All defined security group name must be prefixed with '{}'".format(sg[NAME], model[CLUSTER][ID] + "."))
     for sg in model[CLUSTER][OPENSTACK][SECURITY_GROUPS]:
+        setDefaultInMap(sg, INBOUND_RULES, [])
+        setDefaultInMap(sg, OUTBOUND_RULES, [])
         for idx, rule in enumerate(sg[INBOUND_RULES]):
             rule_name = "security_groups[{}].inbound_rules[{}]".format(sg[NAME], idx)
             rule[_TF_NAME] = "{}_ingress_{}".format(sg[NAME], idx)
@@ -190,11 +193,12 @@ MOUNT="mount"
 DISK_TO_MOUNT_COUNT = "disksToMountCount"
 FSTYPE="fstype"
 DATA_FSTYPE="data_fstype"
-
+HOST_VIP="host_vip"
 
 def groom_roles(model):
     for roleName, role in model[DATA][ROLE_BY_NAME].items():
         setDefaultInMap(role, OPENSTACK, {})
+        setDefaultInMap(role[OPENSTACK], HOST_VIP, True)
         setDefaultInMap(role, DATA_DISKS, [] )
         # ---------- Handle domain
         project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
@@ -259,6 +263,7 @@ HOSTNAME="hostname"
 _FQDN="_fqdn"
 ROLE="role"
 
+NETWORK_TO_FETCH="networkToFetch"
 
 def remove_trailing_dot(s):
     if s.endswith("."):
@@ -268,6 +273,7 @@ def remove_trailing_dot(s):
 
 
 def groom_nodes(model):
+    model[DATA][NETWORK_TO_FETCH] = set()
     for node in model[CLUSTER][NODES]:
         setDefaultInMap(node, OPENSTACK, {})
         if NETWORK not in node[OPENSTACK]:
@@ -275,6 +281,7 @@ def groom_nodes(model):
                 node[OPENSTACK][NETWORK] =  model[CLUSTER][OPENSTACK][DEFAULTS][NETWORK]
             else:
                 ERROR("node[{}].openstack.network is missing and there is no default value".format(node[NAME]))
+        model[DATA][NETWORK_TO_FETCH].add(node[OPENSTACK][NETWORK])
         if AVAILABILITY_ZONE not in node[OPENSTACK]:
             if AVAILABILITY_ZONE in model[CLUSTER][OPENSTACK][DEFAULTS]:
                 node[OPENSTACK][AVAILABILITY_ZONE] =  model[CLUSTER][OPENSTACK][DEFAULTS][AVAILABILITY_ZONE]
