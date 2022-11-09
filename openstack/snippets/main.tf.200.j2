@@ -74,7 +74,9 @@ data "openstack_images_image_v2" "{{ m.func.terra_name(img) }}" {
 
 resource "openstack_networking_secgroup_v2" "{{ m.func.terra_name(sg.name) }}" {
   name        = "{{ sg.name }}"
+{% if sg.description is defined %}
   description = "{{ sg.description }}"
+{% endif %}
   delete_default_rules = true
 }
 {% endfor %}
