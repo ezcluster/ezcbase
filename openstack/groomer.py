@@ -164,7 +164,8 @@ def groom_security_groups(model):
 
 FLAVORS="flavors"
 INTERNAL_FLAVORS="internal_flavors"
-
+RAM_GB="ram_gb"
+_RAM_MB="_ram_mb"
 
 def groom_flavors(model):
     for flavor in model[CLUSTER][OPENSTACK][FLAVORS]:
@@ -172,6 +173,7 @@ def groom_flavors(model):
         if not flavor[NAME].startswith(prefix):
             ERROR("flavors[{}]: All defined flavor name must be prefixed with '{}'".format(flavor[NAME], prefix))
         model[DATA][INTERNAL_FLAVORS].add(flavor[NAME])
+        flavor[_RAM_MB] = flavor[RAM_GB] * 1024
 
 # ---------------------------------------------------------------------------------------- Roles
 
@@ -299,7 +301,7 @@ PUBLIC_KEY="public_key"
 
 def groom_key_pair(model):
     project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
-    model[DATA][KEY_PAIR] = { "name": "{}_{}".format(model[CLUSTER][ID], project[KEY_PAIR][BASE_NAME]), "public_key": project[KEY_PAIR][PUBLIC_KEY] }
+    model[DATA][KEY_PAIR] = { "name": "{}_{}_{}".format(model[CLUSTER][OPENSTACK][PROJECT], model[CLUSTER][ID], project[KEY_PAIR][BASE_NAME]), "public_key": project[KEY_PAIR][PUBLIC_KEY] }
     if LOCAL_PRIVATE_KEY_PATH in project[KEY_PAIR]:
         if not os.path.exists(project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
             ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(project[NAME], project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
@@ -379,7 +381,6 @@ def compute_search_domain(model):
 
 
 # ___________________________________________________________________________________________________
-
 
 
 def groom(_plugin, model):
