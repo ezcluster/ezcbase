@@ -158,7 +158,7 @@ resource "openstack_networking_secgroup_rule_v2" "{{  m.func.terra_name(rule._tf
 {% for flavor in m.cluster.openstack.flavors %}
 resource "openstack_compute_flavor_v2" "{{ m.func.terra_name(flavor.name) }}" {
   name  = "{{ flavor.name }}"
-  ram   = "{{ flavor.ram_mb }}"
+  ram   = "{{ flavor._ram_mb }}"
   vcpus = "{{ flavor.vcpus }}"
   disk  = "{{ flavor.disk_gb }}"
 }

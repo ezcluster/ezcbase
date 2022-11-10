@@ -108,7 +108,7 @@ mapping:
             mapping:
               "name": { type: str, required: true }
               "description": { type: str, required: false }
-              "ram_mb": { type: int, required: true }
+              "ram_gb": { type: int, required: true }
               "vcpus": { type: int, required: true }
               "disk_gb": { type: int, required: true }
 
