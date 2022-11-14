@@ -28,6 +28,7 @@ type: map
 mapping:
   "projects":
     type: map
+    required: false
     mapping:
       regex;(.*):
         type: map
@@ -48,7 +49,7 @@ mapping:
 
   "images":
     type: map
-    required: true
+    required: false
     mapping:
       regex;(.*):
         type: map

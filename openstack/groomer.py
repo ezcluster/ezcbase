@@ -43,6 +43,10 @@ LOCAL_PRIVATE_KEY_PATH="local_private_key_path"
 DNS_ZONE="dns_zone"
 
 def groom_config(model):
+    if PROJECTS not in model[CONFIG]:
+        ERROR("Missing 'projects:' entry in 'ezconfig' configuration file")
+    if IMAGES not in model[CONFIG]:
+        ERROR("Missing 'images:' entry in 'ezconfig' configuration file")
     for pname, prj in model[CONFIG][PROJECTS].items():
         if not prj[DNS_ZONE].endswith("."):
             prj[DNS_ZONE] = prj[DNS_ZONE] + "."
