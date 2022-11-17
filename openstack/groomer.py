@@ -210,7 +210,9 @@ def groom_roles(model):
         setDefaultInMap(role, DATA_DISKS, [] )
         # ---------- Handle domain
         project = model[CONFIG][PROJECTS][model[CLUSTER][OPENSTACK][PROJECT]]
-        if role[DOMAIN].endswith("."):
+        if DOMAIN not in role or role[DOMAIN] is None:
+            role[DOMAIN] = project[DNS_ZONE]
+        elif role[DOMAIN].endswith("."):
             # Domain is absolute. Must check against our zone
             if not role[DOMAIN].endswith(project[DNS_ZONE]):
                 ERROR("role[{}].domain must ends with our dns_zone ({})".format(roleName, project[DNS_ZONE]))
@@ -295,8 +297,12 @@ def groom_nodes(model):
                 node[OPENSTACK][AVAILABILITY_ZONE] =  model[CLUSTER][OPENSTACK][DEFAULTS][AVAILABILITY_ZONE]
             else:
                 pass # availability_zone is optional
-        node[_OS_NAME] = "{}.{}".format(model[CLUSTER][ID], node[NAME])
-        node[_FQDN] = remove_trailing_dot(node[HOSTNAME] + "." + model[DATA][ROLE_BY_NAME][node[ROLE]][DOMAIN])
+        if DOMAIN in model[CLUSTER] and model[CLUSTER][DOMAIN] is not None:
+            node[_OS_NAME] = "{}.{}".format(model[CLUSTER][ID], node[NAME])
+        else:
+            node[_OS_NAME] = node[NAME]
+        role = model[DATA][ROLE_BY_NAME][node[ROLE]]
+        node[_FQDN] = remove_trailing_dot(node[HOSTNAME] + "." + role[DOMAIN])
 
 # ---------------------------------------------------------------------------------------- key pair
 
@@ -378,7 +384,7 @@ def compute_search_domain(model):
         domain = slices[idx] + sep + domain
         search_domains.insert(0, domain)
         sep = "."
-    if DOMAIN in model[CLUSTER]:
+    if DOMAIN in model[CLUSTER] and model[CLUSTER][DOMAIN] is not None:
         domain = model[CLUSTER][DOMAIN] + sep + domain
         search_domains.insert(0, domain)
     model[DATA][SEARCH_DOMAINS] = search_domains
