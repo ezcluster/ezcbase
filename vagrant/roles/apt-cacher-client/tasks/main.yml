@@ -1,0 +1,35 @@
+
+
+- name: Setup apt-cacher as proxy
+  ansible.builtin.template:
+    src: 12proxy.conf.j2
+    dest:  /etc/apt/apt.conf.d/12proxy.conf
+  when: apt_cacher_mode == 'proxy'
+
+- name: Remove apt-cacher as proxy
+  ansible.builtin.file:
+    path: /etc/apt/apt.conf.d/12proxy.conf
+    state: absent
+  when: apt_cacher_mode != 'proxy'
+
+
+- name: Setup apt-cacher by replacing ubuntu server url
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: 'http://{{item}}\.ubuntu\.com'
+    replace: '{{apt_cacher_server}}/{{item}}.ubuntu.com'
+  when: apt_cacher_mode == 'replace'
+  with_items:
+    - archive
+    - security
+
+- name: Remove apt-cacher by replacing ubuntu server url for archives
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: 'http[:/.\w]./{{item}}\.ubuntu\.com'
+    replace: 'http://{{item}}.ubuntu.com'
+  when: apt_cacher_mode != 'replace'
+  with_items:
+    - archive
+    - security
+

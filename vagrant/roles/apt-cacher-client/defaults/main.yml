@@ -1,0 +1,5 @@
+
+
+#apt_cacher_server: https://apt-cacher.my.company.com:3142
+#apt_cacher_mode: proxy, replace or none
+

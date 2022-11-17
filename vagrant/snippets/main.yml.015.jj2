@@ -23,3 +23,6 @@
 {%% endif %%}
 {%% endif %%}
   - { role: disk_format, tags: [ "base", "disks" ] }
+{%% if m.data.box.os_family == 'Debian' %%}
+  - { role: apt-cacher-client, apt_cacher_mode: "{{{ m.cluster.vagrant.apt_cacher_mode }}}", apt_cacher_server: "{{{ m.cluster.vagrant.apt_cacher_server | default('http://????:3142') }}}" }
+{%% endif %%}

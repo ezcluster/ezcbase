@@ -49,7 +49,9 @@ mapping:
       "synced_folders":
         include: synced_folder_list
       "default_router": { type: str, required: false }
-  "roles": 
+      "apt_cacher_server": { type: str, required: false}  # Must include port (3142) ex: http;//ap-cacher.mydomain.com:3142
+      "apt_cacher_mode": { type: str, required: false, enum: ["none", "proxy", "replace"]}    # default: none
+  "roles":
     type: seq
     required: true
     sequence:

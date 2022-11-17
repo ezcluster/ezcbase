@@ -20,6 +20,14 @@ import logging
 from misc import ERROR, setDefaultInMap, appendPath, resolveIps
 import copy
 
+OS_FAMILY = "os_family"
+
+BOX = "box"
+VAGRANT = "vagrant"
+DATA = "data"
+CLUSTER = "cluster"
+
+
 loggerConfig = logging.getLogger("ezcluster.config")
 
        
@@ -31,15 +39,15 @@ deviceFromIndex = ['sda', 'sdb', 'sdc', 'sdd', 'sde', 'sdf', 'sdg', 'sdh', 'sdi'
 
 def groomRoles(model):
     # Handle data disks            
-    for rl in model["cluster"]["roles"]:
-        role = model["data"]["roleByName"][rl["name"]]
+    for rl in model[CLUSTER]["roles"]:
+        role = model[DATA]["roleByName"][rl["name"]]
         if "data_disks" in role:
-            first_port = model["data"]["box"]["firstFreeDiskPort"]
+            first_port = model[DATA]["box"]["firstFreeDiskPort"]
             for i in range(0, len(role['data_disks'])):
                 port = i + first_port
                 role['data_disks'][i]['port'] = port
                 role['data_disks'][i]['device'] = deviceFromIndex[port]
-                setDefaultInMap(role['data_disks'][i], "fstype", model["data"]["box"]["defaultFsType"])
+                setDefaultInMap(role['data_disks'][i], "fstype", model[DATA]["box"]["defaultFsType"])
             disksToMount = 0
             for d in role['data_disks']:
                 if "mount" in d:
@@ -56,7 +64,7 @@ RESIZE_ROOT_DISK = "resizeRootDisk"
 def groomNodes(model):
     resolveIps(model)
     model['data']['dataDisksByNode'] = {}
-    for node in model['cluster']['nodes']:
+    for node in model[CLUSTER]['nodes']:
         if SYNCED_FOLDERS not in node:
             node[SYNCED_FOLDERS] = []
         role = model["data"]["roleByName"][node["role"]]
@@ -83,30 +91,42 @@ def groomNodes(model):
                 model["data"][RESIZE_ROOT_DISK] = False
 
 
+
+APT_CACHER_SERVER="apt_cacher_server"
+APT_CACHER_MODE="apt_cacher_mode"
+CONFIG = "config"
+
+
 def groom(_plugin, model):
-    if "boxes" not in model["config"]:
-        ERROR("Missing 'boxes' definition in config file")
-    for box in model["config"]["boxes"]:
+    if "boxes" not in model[CONFIG]:
+        ERROR("Missing 'boxes' definition in CONFIG file")
+    for box in model[CONFIG]["boxes"]:
         for name in box["names"]:
-            if name == model["cluster"]["vagrant"]["box"]:
-                model["data"]["box"] = box
-    if "box" not in model["data"]:
-        ERROR("Unable to find a box definition in config for box={}".format(model["cluster"]["vagrant"]["box"]))
-    if model["data"]["box"]["os_family"] == "RedHat":
-        if "yum_repo" not in model["cluster"]["vagrant"]:
+            if name == model[CLUSTER][VAGRANT][BOX]:
+                model[DATA][BOX] = box
+    if BOX not in model[DATA]:
+        ERROR("Unable to find a box definition in CONFIG for box={}".format(model[CLUSTER][VAGRANT][BOX]))
+    if model[DATA][BOX][OS_FAMILY] == "RedHat":
+        if "yum_repo" not in model[CLUSTER][VAGRANT]:
             ERROR("'vagrant.yum_repo' is mandatory if 'box.os_family' == 'RedHat'")
-        repoInConfig = "repositories" in model["config"] and "vagrant" in model["config"]["repositories"] and "yum_repo_base_url" in model["config"]["repositories"]["vagrant"]
-        if model["cluster"]["vagrant"]["yum_repo"] == "local" and not repoInConfig:
-            ERROR("'repositories.vagrant.repo_yum_base_url' is not defined in config file while 'vagrant.yum_repo' is set to 'local' in '{}'".format(model["data"]["sourceFileDir"]))
+        repoInConfig = "repositories" in model[CONFIG] and VAGRANT in model[CONFIG]["repositories"] and "yum_repo_base_url" in model[CONFIG]["repositories"][VAGRANT]
+        if model[CLUSTER][VAGRANT]["yum_repo"] == "local" and not repoInConfig:
+            ERROR("'repositories.vagrant.repo_yum_base_url' is not defined in CONFIG file while 'vagrant.yum_repo' is set to 'local' in '{}'".format(model[DATA]["sourceFileDir"]))
         if repoInConfig:
-            # All plugins are lookinhg up their repositories in model["data"]. So does the vagrant one.
-            setDefaultInMap(model["data"], "repositories", {})
-            setDefaultInMap(model["data"]["repositories"], "vagrant", {})
-            model["data"]["repositories"]["vagrant"]["yum_repo_base_url"] = model["config"]["repositories"]["vagrant"]["yum_repo_base_url"]
+            # All plugins are looking up their repositories in model["data"]. So does the vagrant one.
+            setDefaultInMap(model[DATA], "repositories", {})
+            setDefaultInMap(model[DATA]["repositories"], VAGRANT, {})
+            model[DATA]["repositories"][VAGRANT]["yum_repo_base_url"] = model[CONFIG]["repositories"][VAGRANT]["yum_repo_base_url"]
+    elif model[DATA][BOX][OS_FAMILY] == "Debian":
+        setDefaultInMap(model[CLUSTER][VAGRANT], APT_CACHER_MODE, "none")
+        if model[CLUSTER][VAGRANT][APT_CACHER_MODE] != "none" and APT_CACHER_SERVER not in model[CLUSTER][VAGRANT]:
+            ERROR("vagrant.{} must be defined if vagrant.{} is not 'none'".format(APT_CACHER_SERVER, APT_CACHER_MODE))
+    else:
+        pass
 
     groomRoles(model)
     groomNodes(model)
         
-    model["data"]["buildScript"] = appendPath(model["data"]["targetFolder"], "build.sh")
+    model[DATA]["buildScript"] = appendPath(model[DATA]["targetFolder"], "build.sh")
     return True  # Always enabled
         
