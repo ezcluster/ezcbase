@@ -24,14 +24,13 @@
 
 
 {%% for name, role in m.data.roleByName.items() %%}
-{%% if role.openstack.apt_cacher_mode != "none" %%}
+# Must be present, even of 'none', to eventually remove it
 - hosts: {{{ name }}}
   roles:
     - role: apt-cacher-client
       apt_cacher_mode: "{{{ role.openstack.apt_cacher_mode }}}"
       apt_cacher_server: "{{{ role.openstack.apt_cacher_server | default('http://????:3142') }}}"
       tags: [ "apt-cacher"]
-{%% endif %%}
 {%% endfor %%}
 
 
