@@ -50,6 +50,8 @@ mapping:
           "network": { type: str, required: false }
           "availability_zone": { type: str, required: false }
           "data_fstype": { type: str, required: false }
+          "apt_cacher_mode": { type: str, required: false, enum: ["none", "proxy", "replace"]}    # default: none
+          "apt_cacher_server": { type: str, required: false}  # Must include port (3142) ex: http;//ap-cacher.mydomain.com:3142
       "dns_records":
         type: seq
         required: false
@@ -126,6 +128,8 @@ mapping:
             mapping:
               "image": { type: str, required: false }
               "flavor": { type: str, required: false }
+              "apt_cacher_mode": { type: str, required: false, enum: ["none", "proxy", "replace"]}    # default: default value
+              "apt_cacher_server": { type: str, required: false}  # Must include port (3142) ex: http;//ap-cacher.mydomain.com:3142
               "security_groups":
                 type: seq
                 required: false

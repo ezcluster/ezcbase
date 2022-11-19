@@ -14,18 +14,34 @@
   - gather_facts:
 
 
+
 - hosts: all
   vars:
     search_domains: {{{ m.data.search_domains }}}
   roles:
     - role: search_domains
       tags: [ "search_domains" ]
+
+
+{%% for name, role in m.data.roleByName.items() %%}
+{%% if role.openstack.apt_cacher_mode != "none" %%}
+- hosts: {{{ name }}}
+  roles:
+    - role: apt-cacher-client
+      apt_cacher_mode: "{{{ role.openstack.apt_cacher_mode }}}"
+      apt_cacher_server: "{{{ role.openstack.apt_cacher_server | default('http://????:3142') }}}"
+      tags: [ "apt-cacher"]
+{%% endif %%}
+{%% endfor %%}
+
+
+- hosts: all
+  roles:
     - role: disk_format
       tags: [ "data_disks" ]
     - role: swap_file
       tags: ["base", "swap"]
   tasks:
-
     - name: Fail if linux distribution is not handled
       tags: ["always"]
       ansible.builtin.fail:

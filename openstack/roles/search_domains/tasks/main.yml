@@ -20,3 +20,7 @@
     mode: '0644'
   notify:
     - apply_netplan
+
+# We flush now, as some following playbooks may depends on name resolution
+- name: Flush handlers
+  meta: flush_handlers

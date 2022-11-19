@@ -201,6 +201,9 @@ FSTYPE="fstype"
 DATA_FSTYPE="data_fstype"
 HOST_VIP="host_vip"
 IMAGES_TO_FETCH="imagesToFetch"
+APT_CACHER_SERVER="apt_cacher_server"
+APT_CACHER_MODE="apt_cacher_mode"
+OS_FAMILY="os_family"
 
 def groom_roles(model):
     model[DATA][IMAGES_TO_FETCH] = set()
@@ -229,6 +232,17 @@ def groom_roles(model):
             ERROR("role[{}].openstack.image={}: Not referenced in config".format(roleName, role[OPENSTACK][IMAGE]))
         role[OPENSTACK][SSH_USER] =  model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][SSH_USER]
         disk_device_from_idx = model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][DEVICE_FROM_IDX]
+        # ------------- Handle apt_cacher
+        if model[CONFIG][IMAGES][role[OPENSTACK][IMAGE]][OS_FAMILY] == "Debian":
+            if APT_CACHER_MODE not in role[OPENSTACK]:
+                role[OPENSTACK][APT_CACHER_MODE] = model[CLUSTER][OPENSTACK][DEFAULTS][APT_CACHER_MODE]
+            if role[OPENSTACK][APT_CACHER_MODE] != "none" and APT_CACHER_SERVER not in role[OPENSTACK]:
+                if APT_CACHER_SERVER not in model[CLUSTER][OPENSTACK][DEFAULTS]:
+                    ERROR("role[{}].openstack.{} is missing and there is no default value".format(roleName, APT_CACHER_SERVER))
+                else:
+                    role[OPENSTACK][APT_CACHER_SERVER] = model[CLUSTER][OPENSTACK][DEFAULTS][APT_CACHER_SERVER]
+        else:
+            role[OPENSTACK][APT_CACHER_MODE] = "none"
         # -------- flavor
         if FLAVOR not in role[OPENSTACK]:
             if FLAVOR in model[CLUSTER][OPENSTACK][DEFAULTS]:
@@ -345,7 +359,6 @@ def groom_dns_records(model):
             record[NAME] = "{}.{}.{}".format(record[NAME], model[CLUSTER][DOMAIN], project[DNS_ZONE])
         if len(record[RECORDS]) < 1:
             ERROR("openstack.dns_record[{}] have at least one record".format(record[NAME]))
-
         #slices = remove_trailing_dot(record[NAME]).split(".")
         slices = record[NAME].split(".")
         sep = ""
@@ -393,6 +406,7 @@ def compute_search_domain(model):
 # ___________________________________________________________________________________________________
 
 
+
 def groom(_plugin, model):
     model[FUNC] = { "terra_name": terra_name }
     model[DATA][INTERNAL_SG] = set()
@@ -402,8 +416,11 @@ def groom(_plugin, model):
     if model[CLUSTER][OPENSTACK][PROJECT] not in model[CONFIG][PROJECTS]:
         ERROR("Unexisting project '{}' definition".format(model[CLUSTER][OPENSTACK][PROJECT]))
     setDefaultInMap(model[CLUSTER][OPENSTACK], DEFAULTS, {})
+    setDefaultInMap(model[CLUSTER][OPENSTACK][DEFAULTS], APT_CACHER_MODE, "none")
     setDefaultInMap(model[CLUSTER][OPENSTACK], SECURITY_GROUPS, [])
     setDefaultInMap(model[CLUSTER][OPENSTACK], FLAVORS, [])
+    if model[CLUSTER][OPENSTACK][DEFAULTS][APT_CACHER_MODE] != "none" and APT_CACHER_SERVER not in model[CLUSTER][OPENSTACK][DEFAULTS]:
+        ERROR("openstack.default.{} must be defined if openstack.default.{} is not 'none'".format(APT_CACHER_SERVER, APT_CACHER_MODE))
     groom_security_groups(model)
     groom_flavors(model)
     groom_roles(model)
