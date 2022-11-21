@@ -12,26 +12,50 @@
     state: absent
   when: apt_cacher_mode != 'proxy'
 
-
-- name: Setup apt-cacher by replacing ubuntu server url
-  ansible.builtin.replace:
-    path: /etc/apt/sources.list
-    regexp: 'http://{{item}}\.ubuntu\.com'
-    replace: '{{apt_cacher_server}}/{{item}}.ubuntu.com'
+- block:
+    - name: Setup apt-cacher by replacing ubuntu server url for archive
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http://archive\.ubuntu\.com'
+        replace: '{{apt_cacher_server}}/archive.ubuntu.com'
+    - name: Wait....
+      ansible.builtin.wait_for:
+        timeout: 1
+    - name: Setup apt-cacher by replacing ubuntu server url for security
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http://security\.ubuntu\.com'
+        replace: '{{apt_cacher_server}}/security.ubuntu.com'
+    - name: Wait....
+      ansible.builtin.wait_for:
+        timeout: 1
+    - name: Setup apt-cacher by replacing ubuntu server url for nova.clouds.archive
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http://nova\.clouds\.archive\.ubuntu\.com'
+        replace: '{{apt_cacher_server}}/nova.clouds.archive.ubuntu.com'
   when: apt_cacher_mode == 'replace'
-  with_items:
-    - archive
-    - security
-    - nova.clouds.archive
 
-- name: Remove apt-cacher by replacing ubuntu server url for archives
-  ansible.builtin.replace:
-    path: /etc/apt/sources.list
-    regexp: 'http[:/.\w]./{{item}}\.ubuntu\.com'
-    replace: 'http://{{item}}.ubuntu.com'
+- block:
+    - name: Remove apt-cacher by replacing ubuntu server url for archives
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http[:/.\w]*/archive\.ubuntu\.com'
+        replace: 'http://archive.ubuntu.com'
+    - name: Wait....
+      ansible.builtin.wait_for:
+        timeout: 1
+    - name: Remove apt-cacher by replacing ubuntu server url for security
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http[:/.\w]*/security\.ubuntu\.com'
+        replace: 'http://security.ubuntu.com'
+    - name: Wait....
+      ansible.builtin.wait_for:
+        timeout: 1
+    - name: Remove apt-cacher by replacing ubuntu server url for nova.clouds.archive
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http[:/.\w]*/nova\.clouds\.archive\.ubuntu\.com'
+        replace: 'http://nova.clouds.archive.ubuntu.com'
   when: apt_cacher_mode != 'replace'
-  with_items:
-    - archive
-    - security
-    - nova.clouds.archive
-
