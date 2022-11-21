@@ -1,0 +1,26 @@
+
+
+- name: Install certificate package
+  ansible.builtin.package: pkg=ca-certificates
+
+
+- name: Fetch CA certificate from urls
+  get_url:
+    url: "{{item.src}}"
+    dest: "/usr/local/share/ca-certificates/{{item.name}}"
+    validate_certs: false
+  notify:
+  - update_trust_store
+  when: register_ca_urls is defined
+  with_items: "{{register_ca_urls}}"
+
+- name: Fetch CA certificate from local path
+  copy:
+    src: "{{item.src}}"
+    dest: "/usr/local/share/ca-certificates/{{item.name}}"
+  notify:
+  - update_trust_store
+  when: register_ca_paths is defined
+  with_items: "{{register_ca_paths}}"
+
+

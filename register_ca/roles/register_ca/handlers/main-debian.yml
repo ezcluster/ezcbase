@@ -1,0 +1,5 @@
+
+
+- name: Update trust store
+  listen: update_trust_store
+  shell: update-ca-certificates
