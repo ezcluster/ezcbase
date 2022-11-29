@@ -30,6 +30,11 @@ schema;node_list:
         mapping:
           "network": { type: str, required: false }
           "availability_zone": { type: str, required: false }
+      "aliases":
+        type: seq
+        required: false
+        sequence:
+          - type: str
 
 
 
@@ -113,7 +118,6 @@ mapping:
               "ram_gb": { type: int, required: true }
               "vcpus": { type: int, required: true }
               "disk_gb": { type: int, required: true }
-
 
   roles:
     type: seq

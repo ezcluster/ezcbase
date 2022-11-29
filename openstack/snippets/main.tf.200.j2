@@ -251,6 +251,8 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
 
 }
 
+// ------------------------------------- node main DNS entry
+
 resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
   zone_id     = data.openstack_dns_zone_v2.dns_zone.id
   name        = "{{node._fqdn}}."
@@ -258,6 +260,18 @@ resource "openstack_dns_recordset_v2" "{{ m.func.terra_name(node.name) }}" {
   type        = "A"
   records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
 }
+
+// ------------------------------------ node DNS aliases
+
+{% for alias in node.aliases %}
+resource "openstack_dns_recordset_v2" "alias_{{ m.func.terra_name(alias) }}" {
+  zone_id     = data.openstack_dns_zone_v2.dns_zone.id
+  name        = "{{alias}}."
+  ttl         = 300
+  type        = "A"
+  records     = [ openstack_compute_instance_v2.{{ m.func.terra_name(node.name) }}.access_ip_v4]
+}
+{% endfor %}
 
 
 {% endfor %}

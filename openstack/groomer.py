@@ -32,6 +32,7 @@ NAME="name"
 OPENSTACK="openstack"
 PROJECT="project"
 FUNC="func"
+ALIASES="aliases"
 
 def terra_name(n):
     return n.replace('.', "_")
@@ -300,6 +301,7 @@ def groom_nodes(model):
     model[DATA][NETWORKS_TO_FETCH] = set()
     for node in model[CLUSTER][NODES]:
         setDefaultInMap(node, OPENSTACK, {})
+        setDefaultInMap(node, ALIASES, [])
         if NETWORK not in node[OPENSTACK]:
             if NETWORK in model[CLUSTER][OPENSTACK][DEFAULTS]:
                 node[OPENSTACK][NETWORK] =  model[CLUSTER][OPENSTACK][DEFAULTS][NETWORK]
