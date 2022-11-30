@@ -26,7 +26,7 @@
 - name: Remove apt-cacher by replacing ubuntu server url for archives
   ansible.builtin.replace:
     path: /etc/apt/sources.list
-    regexp: 'http[:/.\w]./{{item}}\.ubuntu\.com'
+    regexp: 'http://[:/.\w]*/{{item}}\.ubuntu\.com'
     replace: 'http://{{item}}.ubuntu.com'
   when: apt_cacher_mode != 'replace'
   with_items:
