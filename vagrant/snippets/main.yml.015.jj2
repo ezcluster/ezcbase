@@ -26,3 +26,12 @@
 {%% if m.data.box.os_family == 'Debian' %%}
   - { role: apt-cacher-client, apt_cacher_mode: "{{{ m.cluster.vagrant.apt_cacher_mode }}}", apt_cacher_server: "{{{ m.cluster.vagrant.apt_cacher_server | default('http://????:3142') }}}" }
 {%% endif %%}
+
+{%% if m.data.box.os_family == 'Debian' %%}
+  tasks:
+    - name: Remove confusing "127.0.2.1 <hostname>" in /etc/hosts
+      ansible.builtin.replace:
+        path: /etc/hosts
+        regexp: '^127.0.2.1'
+        replace: "#127.0.2.1"
+{%% endif %%}
