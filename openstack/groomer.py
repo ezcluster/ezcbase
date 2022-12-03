@@ -37,6 +37,12 @@ ALIASES="aliases"
 def terra_name(n):
     return n.replace('.', "_")
 
+def terra_bool(n):
+    if n:
+        return "true"
+    else:
+        return "false"
+
 
 # ----------------------------------------------------------------------------- Config
 KEY_PAIR="key_pair"
@@ -407,10 +413,11 @@ def compute_search_domain(model):
 
 # ___________________________________________________________________________________________________
 
-
+PREVENT_DESTROY="prevent_destroy"
+IGNORE_CHANGES="ignore_changes"
 
 def groom(_plugin, model):
-    model[FUNC] = { "terra_name": terra_name }
+    model[FUNC] = { "terra_name": terra_name, "terra_bool": terra_bool }
     model[DATA][INTERNAL_SG] = set()
     model[DATA][EXTERNAL_SG] = set()
     model[DATA][INTERNAL_FLAVORS] = set()
@@ -421,6 +428,8 @@ def groom(_plugin, model):
     setDefaultInMap(model[CLUSTER][OPENSTACK][DEFAULTS], APT_CACHER_MODE, "none")
     setDefaultInMap(model[CLUSTER][OPENSTACK], SECURITY_GROUPS, [])
     setDefaultInMap(model[CLUSTER][OPENSTACK], FLAVORS, [])
+    setDefaultInMap(model[CLUSTER][OPENSTACK], IGNORE_CHANGES, [])
+    setDefaultInMap(model[CLUSTER][OPENSTACK], PREVENT_DESTROY, True)
     if model[CLUSTER][OPENSTACK][DEFAULTS][APT_CACHER_MODE] != "none" and APT_CACHER_SERVER not in model[CLUSTER][OPENSTACK][DEFAULTS]:
         ERROR("openstack.default.{} must be defined if openstack.default.{} is not 'none'".format(APT_CACHER_SERVER, APT_CACHER_MODE))
     groom_security_groups(model)

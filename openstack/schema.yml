@@ -45,6 +45,12 @@ mapping:
     required: true
     mapping:
       "project": { type: str, required: true }
+      "prevent_destroy": { type: bool, required: false }  # Default to true. See https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle
+      "ignore_changes":  # See https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle
+        type: seq
+        required: false
+        sequence:
+          - type: str
       "defaults":
         type: map
         required: false

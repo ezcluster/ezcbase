@@ -249,6 +249,17 @@ resource "openstack_compute_instance_v2" "{{ m.func.terra_name(node.name) }}" {
 
 {% endfor %}
 
+  lifecycle {
+    prevent_destroy = {{ m.func.terra_bool(m.cluster.openstack.prevent_destroy) }}
+    ignore_changes = [
+{% for ic in m.cluster.openstack.ignore_changes %}
+        {{ ic }},
+{% endfor %}
+    ]
+  }
+
+
+
 }
 
 // ------------------------------------- node main DNS entry
