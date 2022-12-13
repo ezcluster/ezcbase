@@ -35,7 +35,7 @@ FUNC="func"
 ALIASES="aliases"
 
 def terra_name(n):
-    return n.replace('.', "_")
+    return n.replace('.', "_").replace('*', 'star')
 
 def terra_bool(n):
     if n:
