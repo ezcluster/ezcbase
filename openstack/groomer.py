@@ -336,7 +336,7 @@ def groom_key_pair(model):
     model[DATA][KEY_PAIR] = { "name": "{}_{}_{}".format(model[CLUSTER][OPENSTACK][PROJECT], model[CLUSTER][ID], project[KEY_PAIR][BASE_NAME]), "public_key": project[KEY_PAIR][PUBLIC_KEY] }
     if LOCAL_PRIVATE_KEY_PATH in project[KEY_PAIR]:
         if not os.path.exists(project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]):
-            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(project[NAME], project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
+            ERROR("Project[{}].key_pair.local_key_path: File '{}' not found".format(model[CLUSTER][OPENSTACK][PROJECT], project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]))
         model[DATA][KEY_PAIR][LOCAL_PRIVATE_KEY_PATH] = project[KEY_PAIR][LOCAL_PRIVATE_KEY_PATH]
 
 # ---------------------------------------------------------------------------------------- dns records
