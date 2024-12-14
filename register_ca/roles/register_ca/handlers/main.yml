@@ -1,7 +1,7 @@
 
-- include: main-debian.yml
+- import_tasks: main-debian.yml
   when: ansible_facts['os_family'] == "Debian"
 
-- include: main-redhat.yml
+- import_tasks: main-redhat.yml
   when: ansible_facts['os_family'] == "RedHat"
 
